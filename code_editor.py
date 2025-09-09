@@ -370,7 +370,6 @@ class CodeEditor(QWidget):
         - Set up real-time error detection
         - Configure editor appearance and theme
         - Enable proper cursor behavior and text selection
-        - Disable automatic text selection on focus
         """
         # Apply Python syntax highlighting
         self.highlighter = PythonHighlighter(self.text_editor.document())
@@ -407,17 +406,6 @@ class CodeEditor(QWidget):
         self.syntax_timer.setSingleShot(True)
         self.syntax_timer.timeout.connect(self.check_syntax)
         self.text_editor.textChanged.connect(self.on_text_changed)
-        
-        # Override focus behavior to prevent text selection
-        def custom_focus_in_event(event):
-            QTextEdit.focusInEvent(self.text_editor, event)
-            # Don't select all text on focus
-            cursor = self.text_editor.textCursor()
-            cursor.clearSelection()
-            self.text_editor.setTextCursor(cursor)
-        
-        # Replace the focus event handler
-        self.text_editor.focusInEvent = custom_focus_in_event
         
     def on_text_changed(self):
         """
@@ -609,9 +597,10 @@ class CodeEditor(QWidget):
         - Clear current code and load new content
         - Trigger syntax highlighting refresh
         - Reset editor state for new problem
+        - Allow normal cursor positioning
         """
         self.text_editor.setPlainText(code)
-        self.text_editor.moveCursor(QTextCursor.Start)
+        # Don't force cursor to start - let user position it naturally
         self.clear_hint()
         self.update_status("Ready to debug...", "normal")
         

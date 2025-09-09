@@ -17,24 +17,181 @@ DEPENDENCIES:
 """
 
 import sys
+import os
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QHBoxLayout, 
-                             QVBoxLayout, QSplitter, QLabel, QFrame)
+                             QVBoxLayout, QSplitter, QLabel, QFrame, QStackedWidget,
+                             QPushButton)
 from PyQt5.QtCore import Qt, QTimer
-from PyQt5.QtGui import QFont, QPalette, QColor
+from PyQt5.QtGui import QFont, QPalette, QColor, QPixmap
 
 from game_controller import GameController
 from code_editor import CodeEditor
 from bomb_widget import BombWidget
 
 
+class StartScreen(QWidget):
+    """
+    START SCREEN WIDGET
+    
+    PURPOSE: Display welcome screen with logo and start game button
+    
+    FUNCTIONALITY:
+    - Show coding-themed welcome interface
+    - Display auto-detected logo image
+    - Provide "Start Game" button to enter main game
+    - Apply consistent dark theme styling
+    """
+    
+    def __init__(self, main_window):
+        super().__init__()
+        self.main_window = main_window
+        self.init_ui()
+        
+    def init_ui(self):
+        """
+        INITIALIZE START SCREEN UI
+        
+        PURPOSE: Create welcome screen with logo and start button
+        """
+        layout = QVBoxLayout(self)
+        layout.setAlignment(Qt.AlignCenter)
+        layout.setSpacing(30)
+        
+        # Main title
+        title_label = QLabel("BOMB DEFUSER")
+        title_label.setAlignment(Qt.AlignCenter)
+        title_label.setStyleSheet("""
+            QLabel {
+                color: #00ff00;
+                font-size: 48px;
+                font-weight: bold;
+                font-family: 'Courier New', monospace;
+                text-shadow: 0 0 10px #00ff00;
+                margin: 20px;
+            }
+        """)
+        layout.addWidget(title_label)
+        
+        # Subtitle
+        subtitle_label = QLabel("Python Debugging Game")
+        subtitle_label.setAlignment(Qt.AlignCenter)
+        subtitle_label.setStyleSheet("""
+            QLabel {
+                color: #ffaa00;
+                font-size: 24px;
+                font-weight: bold;
+                font-family: 'Courier New', monospace;
+                margin: 10px;
+            }
+        """)
+        layout.addWidget(subtitle_label)
+        
+        # Logo display area
+        self.logo_label = QLabel()
+        self.logo_label.setAlignment(Qt.AlignCenter)
+        self.logo_label.setMinimumSize(200, 150)
+        self.logo_label.setStyleSheet("""
+            QLabel {
+                background-color: #2b2b2b;
+                border: 2px solid #444;
+                border-radius: 10px;
+                padding: 20px;
+            }
+        """)
+        
+        # Try to load logo image, fallback to text
+        logo_loaded = self.load_logo_image()
+        if not logo_loaded:
+            self.logo_label.setText("CODING CLUB")
+            self.logo_label.setStyleSheet("""
+                QLabel {
+                    background-color: #2b2b2b;
+                    color: #00ff00;
+                    font-size: 18px;
+                    font-weight: bold;
+                    border: 2px solid #444;
+                    border-radius: 10px;
+                    padding: 20px;
+                }
+            """)
+        
+        layout.addWidget(self.logo_label)
+        
+        # Start game button
+        start_button = QPushButton("🚀 START GAME")
+        start_button.setMinimumHeight(60)
+        start_button.setStyleSheet("""
+            QPushButton {
+                background-color: #0e7490;
+                color: white;
+                font-size: 20px;
+                font-weight: bold;
+                border: none;
+                border-radius: 10px;
+                padding: 15px 30px;
+                font-family: 'Courier New', monospace;
+            }
+            QPushButton:hover {
+                background-color: #0891b2;
+                transform: scale(1.05);
+            }
+            QPushButton:pressed {
+                background-color: #0c7489;
+            }
+        """)
+        start_button.clicked.connect(self.start_game)
+        layout.addWidget(start_button)
+        
+        # Add some spacing at bottom
+        layout.addStretch()
+        
+    def load_logo_image(self):
+        """
+        LOAD LOGO IMAGE WITH AUTO-DETECTION
+        
+        PURPOSE: Automatically detect and load logo.png or logo.jpg
+        
+        RETURNS:
+        - True if image was loaded successfully
+        - False if no image found (will use text fallback)
+        """
+        # Check for logo files in current directory
+        for extension in ['png', 'jpg', 'jpeg']:
+            logo_path = f"logo.{extension}"
+            if os.path.exists(logo_path):
+                try:
+                    pixmap = QPixmap(logo_path)
+                    if not pixmap.isNull():
+                        # Scale image to fit the label while maintaining aspect ratio
+                        scaled_pixmap = pixmap.scaled(
+                            180, 130, Qt.KeepAspectRatio, Qt.SmoothTransformation
+                        )
+                        self.logo_label.setPixmap(scaled_pixmap)
+                        return True
+                except Exception as e:
+                    print(f"Error loading logo image {logo_path}: {e}")
+                    continue
+        
+        return False
+        
+    def start_game(self):
+        """
+        START GAME TRANSITION
+        
+        PURPOSE: Switch from start screen to main game interface
+        """
+        self.main_window.show_game_screen()
+
+
 class BombDefuserGame(QMainWindow):
     """
     MAIN APPLICATION WINDOW
     
-    PURPOSE: Central coordinator for all game components and UI layout
+    PURPOSE: Central coordinator for all game components and screen management
     
     FUNCTIONALITY:
-    - Creates split-panel layout with code editor and bomb visualization
+    - Manages screen transitions using QStackedWidget
+    - Creates start screen and game interface
     - Initializes game controller and manages application state  
     - Handles window styling and dark theme application
     - Coordinates communication between UI components
@@ -48,26 +205,50 @@ class BombDefuserGame(QMainWindow):
         
     def init_ui(self):
         """
-        INITIALIZE USER INTERFACE LAYOUT
+        INITIALIZE USER INTERFACE WITH SCREEN MANAGEMENT
         
-        PURPOSE: Set up split-panel layout with code editor and bomb display
+        PURPOSE: Set up stacked widget architecture for start screen and game
         
         LAYOUT STRUCTURE:
         Main Window
-        ├── Central Widget (QSplitter)
-        │   ├── Left Panel: Code Editor + Controls  
-        │   └── Right Panel: Bomb Visualization + Timer
+        ├── QStackedWidget (Central Widget)
+        │   ├── Start Screen (Index 0)
+        │   └── Game Screen (Index 1)
+        │       ├── Left Panel: Code Editor + Controls  
+        │       └── Right Panel: Bomb Visualization + Timer
         """
         # Set window properties
         self.setWindowTitle("BOMB DEFUSER - Python Debugging Game")
         self.setGeometry(100, 100, 1400, 800)
         self.setMinimumSize(1000, 600)
         
-        # Create central widget with horizontal splitter
-        central_widget = QWidget()
-        self.setCentralWidget(central_widget)
+        # Create stacked widget for screen management
+        self.stacked_widget = QStackedWidget()
+        self.setCentralWidget(self.stacked_widget)
         
-        main_layout = QHBoxLayout(central_widget)
+        # Create and add start screen
+        self.start_screen = StartScreen(self)
+        self.stacked_widget.addWidget(self.start_screen)
+        
+        # Create and add game screen
+        self.game_screen = self.create_game_screen()
+        self.stacked_widget.addWidget(self.game_screen)
+        
+        # Start with the start screen
+        self.stacked_widget.setCurrentWidget(self.start_screen)
+        
+    def create_game_screen(self):
+        """
+        CREATE GAME SCREEN INTERFACE
+        
+        PURPOSE: Create the main game interface with code editor and bomb display
+        
+        RETURNS:
+        - QWidget containing the complete game interface
+        """
+        game_widget = QWidget()
+        
+        main_layout = QHBoxLayout(game_widget)
         main_layout.setContentsMargins(10, 10, 10, 10)
         
         # Create splitter for resizable panels
@@ -85,8 +266,7 @@ class BombDefuserGame(QMainWindow):
         # Set initial splitter proportions (60% code, 40% bomb)
         splitter.setSizes([840, 560])
         
-        # Initialize game controller with UI components
-        self.game_controller.initialize_game(self.code_editor, self.bomb_widget)
+        return game_widget
         
     def create_left_panel(self):
         """
@@ -149,21 +329,26 @@ class BombDefuserGame(QMainWindow):
         layout = QVBoxLayout(panel)
         layout.setSpacing(10)
         
-        # Club logo in top-right corner of game screen
+        # Club logo with auto-detected image
         self.club_logo_label = QLabel("CODING CLUB")
         self.club_logo_label.setAlignment(Qt.AlignCenter)
         self.club_logo_label.setFixedSize(120, 60)
-        self.club_logo_label.setStyleSheet("""
-            QLabel {
-                background-color: #2b2b2b;
-                color: #00ff00;
-                font-size: 12px;
-                font-weight: bold;
-                padding: 5px;
-                border: 2px solid #444;
-                border-radius: 5px;
-            }
-        """)
+        
+        # Try to load logo image, fallback to text
+        logo_loaded = self.load_game_logo()
+        if not logo_loaded:
+            self.club_logo_label.setStyleSheet("""
+                QLabel {
+                    background-color: #2b2b2b;
+                    color: #00ff00;
+                    font-size: 12px;
+                    font-weight: bold;
+                    padding: 5px;
+                    border: 2px solid #444;
+                    border-radius: 5px;
+                }
+            """)
+        
         layout.addWidget(self.club_logo_label)
         
         # Level info header
@@ -193,19 +378,51 @@ class BombDefuserGame(QMainWindow):
         
         return panel
         
-    def show_game_screen(self):
-        """Switch to game screen and initialize game"""
-        self.stacked_widget.setCurrentWidget(self.game_screen)
+    def load_game_logo(self):
+        """
+        LOAD LOGO IMAGE FOR GAME INTERFACE
         
-        # Copy logo from start screen if available
-        if (hasattr(self.start_screen, 'logo_label') and 
-            self.start_screen.logo_label.pixmap() and 
-            not self.start_screen.logo_label.pixmap().isNull()):
-            scaled_pixmap = self.start_screen.logo_label.pixmap().scaled(
-                110, 50, Qt.KeepAspectRatio, Qt.SmoothTransformation
-            )
-            self.club_logo_label.setPixmap(scaled_pixmap)
-            self.club_logo_label.setText("")
+        PURPOSE: Load auto-detected logo for the game interface
+        
+        RETURNS:
+        - True if image was loaded successfully
+        - False if no image found (will use text fallback)
+        """
+        # Check for logo files in current directory
+        for extension in ['png', 'jpg', 'jpeg']:
+            logo_path = f"logo.{extension}"
+            if os.path.exists(logo_path):
+                try:
+                    pixmap = QPixmap(logo_path)
+                    if not pixmap.isNull():
+                        # Scale image to fit the smaller game interface label
+                        scaled_pixmap = pixmap.scaled(
+                            110, 50, Qt.KeepAspectRatio, Qt.SmoothTransformation
+                        )
+                        self.club_logo_label.setPixmap(scaled_pixmap)
+                        self.club_logo_label.setText("")  # Clear text when image loaded
+                        self.club_logo_label.setStyleSheet("""
+                            QLabel {
+                                background-color: #2b2b2b;
+                                padding: 5px;
+                                border: 2px solid #444;
+                                border-radius: 5px;
+                            }
+                        """)
+                        return True
+                except Exception as e:
+                    print(f"Error loading game logo image {logo_path}: {e}")
+                    continue
+        
+        return False
+        
+    def show_game_screen(self):
+        """
+        SHOW GAME SCREEN AND INITIALIZE GAME
+        
+        PURPOSE: Transition from start screen to game interface and initialize game
+        """
+        self.stacked_widget.setCurrentWidget(self.game_screen)
         
         # Initialize game controller with UI components
         if hasattr(self, 'code_editor') and hasattr(self, 'bomb_widget'):
