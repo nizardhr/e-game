@@ -430,6 +430,30 @@ class BombDefuserGame(QMainWindow):
         # Initialize game controller with UI components
         if hasattr(self, 'code_editor') and hasattr(self, 'bomb_widget'):
             self.game_controller.initialize_game(self.code_editor, self.bomb_widget)
+            
+            # Connect restart signal from code editor to game controller (if restart_level method exists)
+            if hasattr(self.code_editor, 'restart_requested') and hasattr(self.game_controller, 'restart_level'):
+                self.code_editor.restart_requested.connect(self.game_controller.restart_level)
+            
+            # Connect game over signal to show restart button (if game_over signal exists)
+            if hasattr(self.game_controller, 'game_over'):
+                self.game_controller.game_over.connect(self.on_game_over)
+            
+    def on_game_over(self, reason):
+        """
+        HANDLE GAME OVER EVENT
+        
+        PURPOSE: Show restart button when player fails
+        
+        INPUTS:
+        - reason: Reason for game over (timer expired, etc.)
+        """
+        # Show restart button in code editor
+        if hasattr(self.code_editor, 'restart_button'):
+            self.code_editor.restart_button.show()
+        
+        # Update status to show failure reason
+        self.code_editor.update_status(f"💥 {reason}", "error")
         
     def apply_dark_theme(self):
         """

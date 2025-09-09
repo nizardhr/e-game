@@ -564,8 +564,12 @@ class CodeEditor(QWidget):
         - Clear current code and load new content
         - Position cursor at start WITHOUT selecting text
         - Reset editor state for new problem
+        - Hide restart button for new level
         - PREVENT any automatic text selection
         """
+        # Hide restart button when starting new level
+        self.restart_button.hide()
+        
         # Temporarily disconnect any signals to prevent interference
         self.text_editor.blockSignals(True)
         
