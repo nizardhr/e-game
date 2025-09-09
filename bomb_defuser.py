@@ -57,7 +57,7 @@ class StartScreen(QWidget):
         layout.setAlignment(Qt.AlignCenter)
         layout.setSpacing(30)
         
-        # Main title
+        # Main title - REMOVED text-shadow to fix CSS warning
         title_label = QLabel("BOMB DEFUSER")
         title_label.setAlignment(Qt.AlignCenter)
         title_label.setStyleSheet("""
@@ -66,8 +66,11 @@ class StartScreen(QWidget):
                 font-size: 48px;
                 font-weight: bold;
                 font-family: 'Courier New', monospace;
-                text-shadow: 0 0 10px #00ff00;
                 margin: 20px;
+                border: 2px solid #00ff00;
+                border-radius: 10px;
+                padding: 15px;
+                background-color: rgba(0, 255, 0, 0.1);
             }
         """)
         layout.addWidget(title_label)
@@ -117,7 +120,7 @@ class StartScreen(QWidget):
         
         layout.addWidget(self.logo_label)
         
-        # Start game button
+        # Start game button - REMOVED transform to fix CSS warning
         start_button = QPushButton("🚀 START GAME")
         start_button.setMinimumHeight(60)
         start_button.setStyleSheet("""
@@ -133,7 +136,7 @@ class StartScreen(QWidget):
             }
             QPushButton:hover {
                 background-color: #0891b2;
-                transform: scale(1.05);
+                border: 2px solid #00ff00;
             }
             QPushButton:pressed {
                 background-color: #0c7489;

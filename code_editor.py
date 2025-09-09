@@ -250,7 +250,6 @@ class CodeEditor(QWidget):
         
         # Submit button
         self.submit_button = QPushButton("🚀 TEST CODE")
-        self.submit_button.clicked.connect(self.submit_code)
         self.submit_button.setMinimumHeight(40)
         self.submit_button.setStyleSheet("""
             QPushButton {
@@ -370,6 +369,7 @@ class CodeEditor(QWidget):
         - Set up real-time error detection
         - Configure editor appearance and theme
         - Enable proper cursor behavior and text selection
+        - COMPLETELY DISABLE any automatic text selection
         """
         # Apply Python syntax highlighting
         self.highlighter = PythonHighlighter(self.text_editor.document())
@@ -396,43 +396,38 @@ class CodeEditor(QWidget):
         self.text_editor.setLineWrapMode(QTextEdit.WidgetWidth)
         self.text_editor.setTabStopWidth(40)  # 4-space tabs
         
-        # Disable automatic selection on focus
-        self.text_editor.setTextInteractionFlags(
-            Qt.TextEditorInteraction
-        )
+        # Enable normal text interaction
+        self.text_editor.setTextInteractionFlags(Qt.TextEditorInteraction)
         
-        # Set up real-time syntax checking
+        # COMPLETELY DISABLE syntax checking to prevent cursor interference
+        # We'll only check syntax when user submits code
         self.syntax_timer = QTimer()
         self.syntax_timer.setSingleShot(True)
         self.syntax_timer.timeout.connect(self.check_syntax)
-        self.text_editor.textChanged.connect(self.on_text_changed)
+        
+        # DON'T connect textChanged to avoid cursor interference
+        # self.text_editor.textChanged.connect(self.on_text_changed)
         
     def on_text_changed(self):
         """
-        HANDLE TEXT CHANGE EVENT
+        HANDLE TEXT CHANGE EVENT - DISABLED
         
-        PURPOSE: Trigger delayed syntax checking when code is modified
-        
-        FUNCTIONALITY:
-        - Start timer for delayed syntax checking
-        - Reset timer on each change to avoid excessive checking
-        - Provide responsive feedback without performance impact
+        PURPOSE: This method is disabled to prevent cursor interference
+        We only check syntax on code submission now
         """
-        # Restart timer for delayed syntax checking
-        self.syntax_timer.stop()
-        self.syntax_timer.start(500)  # Check after 500ms of inactivity
+        pass  # Disabled to prevent cursor jumping
         
     def check_syntax(self):
         """
         CHECK PYTHON SYNTAX
         
-        PURPOSE: Perform real-time syntax validation of code
+        PURPOSE: Perform syntax validation of code ONLY when requested
         
         FUNCTIONALITY:
         - Parse code using Python AST
-        - Detect and highlight syntax errors
         - Update status display with error information
         - Emit signals for game controller integration
+        - NO automatic highlighting to prevent cursor issues
         """
         code = self.text_editor.toPlainText().strip()
         
@@ -444,7 +439,6 @@ class CodeEditor(QWidget):
             # Attempt to parse the code
             ast.parse(code)
             self.update_status("✓ Syntax OK", "success")
-            self.clear_error_highlighting()
             
         except SyntaxError as e:
             # Handle syntax error
@@ -452,7 +446,6 @@ class CodeEditor(QWidget):
             error_msg = str(e.msg) if e.msg else "Syntax error"
             
             self.update_status(f"✗ Syntax Error: {error_msg}", "error")
-            self.highlight_error_line(error_line)
             self.syntax_error_found.emit(error_msg, error_line)
             
         except Exception as e:
@@ -461,49 +454,19 @@ class CodeEditor(QWidget):
             
     def highlight_error_line(self, line_number):
         """
-        HIGHLIGHT ERROR LINE
+        HIGHLIGHT ERROR LINE - DISABLED
         
-        PURPOSE: Visually highlight line containing syntax error
-        
-        INPUTS:
-        - line_number: Line number with error (1-based)
-        
-        FUNCTIONALITY:
-        - Move cursor to error line
-        - Apply error highlighting format
-        - Ensure error line is visible in editor
+        PURPOSE: This method is disabled to prevent cursor jumping
         """
-        cursor = self.text_editor.textCursor()
-        
-        # Move to error line (convert to 0-based)
-        cursor.movePosition(QTextCursor.Start)
-        for _ in range(line_number - 1):
-            cursor.movePosition(QTextCursor.Down)
-            
-        # Select entire line
-        cursor.select(QTextCursor.LineUnderCursor)
-        
-        # Apply error highlighting
-        error_format = QTextCharFormat()
-        error_format.setBackground(QColor(255, 0, 0, 30))  # Light red background
-        cursor.setCharFormat(error_format)
-        
-        # Move cursor to error position
-        self.text_editor.setTextCursor(cursor)
+        pass  # Disabled to prevent cursor issues
         
     def clear_error_highlighting(self):
         """
-        CLEAR ERROR HIGHLIGHTING
+        CLEAR ERROR HIGHLIGHTING - DISABLED
         
-        PURPOSE: Remove error highlighting when syntax is fixed
-        
-        FUNCTIONALITY:
-        - Reset text formatting to default
-        - Clear background highlighting
-        - Maintain syntax highlighting colors
+        PURPOSE: This method is disabled to prevent cursor jumping
         """
-        # This will be handled by the syntax highlighter refresh
-        self.highlighter.rehighlight()
+        pass  # Disabled to prevent cursor issues
         
     def update_status(self, message, status_type="normal"):
         """
@@ -548,6 +511,7 @@ class CodeEditor(QWidget):
         FUNCTIONALITY:
         - Get current code from editor
         - Validate code is not empty
+        - Check syntax before submission
         - Emit signal with code content
         - Update UI state during submission
         """
@@ -556,6 +520,9 @@ class CodeEditor(QWidget):
         if not code:
             self.update_status("✗ No code to submit!", "error")
             return
+            
+        # Check syntax before submission
+        self.check_syntax()
             
         # Disable submit button temporarily
         self.submit_button.setEnabled(False)
@@ -595,14 +562,44 @@ class CodeEditor(QWidget):
         
         FUNCTIONALITY:
         - Clear current code and load new content
-        - Trigger syntax highlighting refresh
+        - Position cursor at start WITHOUT selecting text
         - Reset editor state for new problem
-        - Allow normal cursor positioning
+        - PREVENT any automatic text selection
         """
+        # Temporarily disconnect any signals to prevent interference
+        self.text_editor.blockSignals(True)
+        
+        # Clear and set the code
+        self.text_editor.clear()
         self.text_editor.setPlainText(code)
-        # Don't force cursor to start - let user position it naturally
+        
+        # Position cursor at start without selecting anything
+        cursor = self.text_editor.textCursor()
+        cursor.movePosition(QTextCursor.Start)
+        cursor.clearSelection()  # CRITICAL: Clear any selection
+        self.text_editor.setTextCursor(cursor)
+        
+        # Re-enable signals
+        self.text_editor.blockSignals(False)
+        
+        # Clear UI state
         self.clear_hint()
         self.update_status("Ready to debug...", "normal")
+        
+        # Give focus to editor but prevent selection
+        QTimer.singleShot(50, self.ensure_no_selection)
+        
+    def ensure_no_selection(self):
+        """
+        ENSURE NO TEXT SELECTION
+        
+        PURPOSE: Make absolutely sure no text is selected after setting code
+        """
+        cursor = self.text_editor.textCursor()
+        cursor.clearSelection()
+        cursor.movePosition(QTextCursor.Start)
+        self.text_editor.setTextCursor(cursor)
+        self.text_editor.setFocus()
         
     def get_code(self):
         """
