@@ -12,6 +12,7 @@ Provides a professional code editing experience with:
 - Real-time error detection and highlighting
 - Hint system for debugging assistance
 - Submit button for code validation
+- Restart button for level retry
 - Line numbers and professional appearance
 
 DEPENDENCIES:
@@ -175,17 +176,20 @@ class CodeEditor(QWidget):
     - Code editing with syntax highlighting
     - Real-time syntax error detection
     - Submit button for code validation
+    - Restart button for level retry
     - Hint display system for debugging assistance
     - Professional code editor appearance
     
     SIGNALS:
     - code_submitted: Emitted when user submits code for validation
     - syntax_error_found: Emitted when syntax errors are detected
+    - restart_requested: Emitted when user requests level restart
     """
     
     # Qt signals for code events
     code_submitted = pyqtSignal(str)  # Emits code content
     syntax_error_found = pyqtSignal(str, int)  # Emits error message and line number
+    restart_requested = pyqtSignal()  # Emits restart request
     
     def __init__(self):
         super().__init__()
@@ -204,6 +208,7 @@ class CodeEditor(QWidget):
         ├── Code Text Editor (QTextEdit)
         ├── Control Panel
         │   ├── Submit Button
+        │   ├── Restart Button
         │   └── Status Label
         └── Hint Display Area (collapsible)
         """
@@ -234,10 +239,11 @@ class CodeEditor(QWidget):
         """
         CREATE CONTROL PANEL
         
-        PURPOSE: Create button panel for code submission and status display
+        PURPOSE: Create button panel for code submission, restart, and status display
         
         COMPONENTS:
         - Submit Code button for validation
+        - Restart Level button for retrying failed levels
         - Status label for feedback messages
         - Professional styling matching game theme
         """
@@ -273,6 +279,34 @@ class CodeEditor(QWidget):
             }
         """)
         
+        # Restart button
+        self.restart_button = QPushButton("🔄 RESTART LEVEL")
+        self.restart_button.setMinimumHeight(40)
+        self.restart_button.setStyleSheet("""
+            QPushButton {
+                background-color: #dc2626;
+                color: white;
+                font-size: 14px;
+                font-weight: bold;
+                border: none;
+                border-radius: 5px;
+                padding: 8px 16px;
+            }
+            QPushButton:hover {
+                background-color: #ef4444;
+            }
+            QPushButton:pressed {
+                background-color: #b91c1c;
+            }
+            QPushButton:disabled {
+                background-color: #666666;
+                color: #999999;
+            }
+        """)
+        
+        # Initially hide restart button (shown only when needed)
+        self.restart_button.hide()
+        
         # Status label
         self.status_label = QLabel("Ready to debug...")
         self.status_label.setStyleSheet("""
@@ -286,6 +320,7 @@ class CodeEditor(QWidget):
         
         # Layout buttons
         layout.addWidget(self.submit_button)
+        layout.addWidget(self.restart_button)
         layout.addWidget(self.status_label)
         layout.addStretch()  # Push elements to left
         
@@ -369,6 +404,7 @@ class CodeEditor(QWidget):
         - Set up real-time error detection
         - Configure editor appearance and theme
         - Enable proper cursor behavior and text selection
+        - Connect button signals
         - COMPLETELY DISABLE any automatic text selection
         """
         # Apply Python syntax highlighting
@@ -398,6 +434,10 @@ class CodeEditor(QWidget):
         
         # Enable normal text interaction
         self.text_editor.setTextInteractionFlags(Qt.TextEditorInteraction)
+        
+        # Connect button signals
+        self.submit_button.clicked.connect(self.submit_code)
+        self.restart_button.clicked.connect(self.request_restart)
         
         # COMPLETELY DISABLE syntax checking to prevent cursor interference
         # We'll only check syntax when user submits code
@@ -551,6 +591,61 @@ class CodeEditor(QWidget):
         self.submit_button.setEnabled(True)
         self.submit_button.setText("🚀 TEST CODE")
         
+    def request_restart(self):
+        """
+        REQUEST LEVEL RESTART
+        
+        PURPOSE: Handle restart button click and emit restart signal
+        
+        FUNCTIONALITY:
+        - Disable restart button temporarily
+        - Update status to show restart in progress
+        - Emit restart signal to game controller
+        - Provide visual feedback to user
+        """
+        # Disable restart button temporarily
+        self.restart_button.setEnabled(False)
+        self.restart_button.setText("⏳ RESTARTING...")
+        
+        # Update status
+        self.update_status("Restarting level...", "normal")
+        
+        # Emit restart signal
+        self.restart_requested.emit()
+        
+        # Re-enable button after delay
+        QTimer.singleShot(1000, self.reset_restart_button)
+
+    def reset_restart_button(self):
+        """
+        RESET RESTART BUTTON STATE
+        
+        PURPOSE: Reset restart button to normal state after restart
+        
+        FUNCTIONALITY:
+        - Re-enable restart button
+        - Restore original button text
+        - Prepare for next restart if needed
+        """
+        self.restart_button.setEnabled(True)
+        self.restart_button.setText("🔄 RESTART LEVEL")
+
+    def show_restart_button(self):
+        """
+        SHOW RESTART BUTTON
+        
+        PURPOSE: Make restart button visible when user fails a level
+        """
+        self.restart_button.show()
+
+    def hide_restart_button(self):
+        """
+        HIDE RESTART BUTTON
+        
+        PURPOSE: Hide restart button when not needed (successful completion or new level)
+        """
+        self.restart_button.hide()
+        
     def set_code(self, code):
         """
         SET EDITOR CODE CONTENT
@@ -564,12 +659,9 @@ class CodeEditor(QWidget):
         - Clear current code and load new content
         - Position cursor at start WITHOUT selecting text
         - Reset editor state for new problem
-        - Hide restart button for new level
+        - Hide restart button for fresh level start
         - PREVENT any automatic text selection
         """
-        # Hide restart button when starting new level
-        self.restart_button.hide()
-        
         # Temporarily disconnect any signals to prevent interference
         self.text_editor.blockSignals(True)
         
@@ -589,6 +681,9 @@ class CodeEditor(QWidget):
         # Clear UI state
         self.clear_hint()
         self.update_status("Ready to debug...", "normal")
+        
+        # Hide restart button for new level
+        self.hide_restart_button()
         
         # Give focus to editor but prevent selection
         QTimer.singleShot(50, self.ensure_no_selection)
