@@ -114,6 +114,7 @@ class GameController(QObject):
         # Connect code editor signals
         self.code_editor.code_submitted.connect(self.validate_code)
         self.code_editor.syntax_error_found.connect(self.on_syntax_error)
+        self.code_editor.restart_requested.connect(self.restart_level)
         
         # Connect bomb widget signals  
         self.bomb_widget.timer_expired.connect(self.on_timer_expired)
@@ -134,9 +135,10 @@ class GameController(QObject):
         FUNCTIONALITY:
         - Load level data and broken code
         - Reset bomb widget and timer
-        - Configure difficulty and time limits
+        - Configure difficulty and time limits (doubled)
         - Update UI displays with level information
         - Start countdown timer
+        - Set hint to appear 30 seconds before timer expires
         """
         self.current_level = level_number
         self.level_completed_flag = False
@@ -164,52 +166,58 @@ class GameController(QObject):
         # Reset and configure bomb widget
         self.bomb_widget.reset_bomb()
         
-        # Start timer based on level difficulty
+        # Start timer based on level difficulty (doubled)
         time_limit = self.calculate_time_limit(level_number)
         self.bomb_widget.start_timer(time_limit)
         self.level_start_time = time.time()
         
-        # Set up hint timer (80% of countdown)
-        hint_delay = int(time_limit * 0.8 * 1000)  # Convert to milliseconds
-        QTimer.singleShot(hint_delay, self.activate_hint_system)
+        # Set up hint timer (30 seconds before timer expires)
+        if time_limit > 30:  # Only set hint if timer is longer than 30 seconds
+            hint_delay = (time_limit - 30) * 1000  # 30 seconds before end, convert to milliseconds
+            QTimer.singleShot(hint_delay, self.activate_hint_system)
+        else:
+            # For very short timers, show hint at 50% time elapsed
+            hint_delay = int(time_limit * 0.5 * 1000)
+            QTimer.singleShot(hint_delay, self.activate_hint_system)
         
         # Mark game as active
         self.game_active = True
         
         print(f"Started Level {level_number}: {level_data['title']}")
+        print(f"Timer: {time_limit} seconds, Hint in: {(time_limit - 30) if time_limit > 30 else time_limit * 0.5} seconds")
         
     def calculate_time_limit(self, level_number):
         """
-        CALCULATE TIME LIMIT FOR LEVEL
+        CALCULATE TIME LIMIT FOR LEVEL (DOUBLED DURATIONS)
         
-        PURPOSE: Determine countdown time based on level difficulty
+        PURPOSE: Determine countdown time based on level difficulty with doubled timer
         
         INPUTS:
         - level_number: Current level (1-10)
         
         RETURNS:
-        - Time limit in seconds
+        - Time limit in seconds (doubled from original)
         
-        TIME SCALING:
-        - Level 1: 30 seconds
-        - Level 10: 300 seconds (5 minutes)
+        TIME SCALING (DOUBLED):
+        - Level 1: 60 seconds (was 30)
+        - Level 10: 600 seconds (was 300)
         - Progressive scaling between levels
         """
-        # Base time: 30 seconds for level 1
-        # Max time: 300 seconds for level 10
+        # Base time: 60 seconds for level 1 (doubled from 30)
+        # Max time: 600 seconds for level 10 (doubled from 300)
         # Linear scaling with slight curve for middle levels
         
         if level_number == 1:
-            return 30
+            return 60  # Doubled from 30
         elif level_number <= 3:
-            return 30 + (level_number - 1) * 15  # 30, 45, 60
+            return 60 + (level_number - 1) * 30  # 60, 90, 120 (doubled from 30, 45, 60)
         elif level_number <= 6:
-            return 60 + (level_number - 3) * 30  # 90, 120, 150
+            return 120 + (level_number - 3) * 60  # 180, 240, 300 (doubled from 90, 120, 150)
         else:
-            return 150 + (level_number - 6) * 37.5  # 187.5, 225, 262.5, 300
+            return 300 + (level_number - 6) * 75  # 375, 450, 525, 600 (doubled from 187.5, 225, 262.5, 300)
             
         # Ensure integer result
-        return int(30 + (level_number - 1) * 30)
+        return int(60 + (level_number - 1) * 60)  # Simplified doubled formula
         
     def update_level_displays(self, level_data):
         """
@@ -329,6 +337,7 @@ class GameController(QObject):
         - Check for partial progress (some errors fixed)
         - Cut wires for fixed errors
         - Update UI with helpful feedback
+        - Show restart option for difficult levels
         """
         errors_remaining = validation_result.get('errors', [])
         errors_fixed_count = validation_result.get('errors_fixed', 0)
@@ -350,8 +359,13 @@ class GameController(QObject):
         if errors_remaining:
             error_msg = f"✗ {len(errors_remaining)} error(s) remaining"
             self.code_editor.update_status(error_msg, "warning")
+            
+            # Show restart button if user is struggling (more than 3 failed attempts could be tracked)
+            # For now, show it after any incorrect solution
+            self.code_editor.show_restart_button()
         else:
             self.code_editor.update_status("✗ Logic error in solution", "error")
+            self.code_editor.show_restart_button()
             
     def on_syntax_error(self, error_message, line_number):
         """
@@ -376,12 +390,12 @@ class GameController(QObject):
         """
         ACTIVATE HINT SYSTEM
         
-        PURPOSE: Make hints available when 80% of time has elapsed
+        PURPOSE: Make hints available when 30 seconds remain on timer
         
         FUNCTIONALITY:
         - Mark hint as available
-        - Generate appropriate hint for current level
-        - Display hint in code editor
+        - Generate hint showing actual error messages from level data
+        - Display hint in code editor with specific bug information
         - Provide visual indication that help is available
         """
         if not self.game_active or self.level_completed_flag or self.hint_shown:
@@ -389,15 +403,40 @@ class GameController(QObject):
             
         self.hint_available = True
         
-        # Get hint for current level
+        # Get level data for current level
         level_data = self.level_manager.get_level(self.current_level)
         
-        if level_data and 'hint' in level_data:
-            hint_text = level_data['hint']
+        if level_data and 'errors' in level_data:
+            # Create hint text from actual error messages
+            errors = level_data['errors']
+            
+            if len(errors) == 1:
+                # Single error
+                hint_text = f"🐛 BUG DETECTED: {errors[0]}"
+            else:
+                # Multiple errors
+                hint_text = "🐛 BUGS DETECTED:\n"
+                for i, error in enumerate(errors, 1):
+                    hint_text += f"{i}. {error}\n"
+            
+            # Add encouraging message
+            hint_text += "\n💡 Fix these issues to defuse the bomb!"
+            
             self.code_editor.show_hint(hint_text)
             self.hint_shown = True
             
-            print(f"Hint activated for level {self.current_level}")
+            print(f"Hint activated for level {self.current_level}: Showing {len(errors)} error(s)")
+        
+        elif level_data and 'hint' in level_data:
+            # Fallback to generic hint if errors field is missing
+            hint_text = f"💡 DEBUGGING HINT: {level_data['hint']}"
+            self.code_editor.show_hint(hint_text)
+            self.hint_shown = True
+            
+            print(f"Hint activated for level {self.current_level} (fallback to generic hint)")
+        
+        else:
+            print(f"No hint data available for level {self.current_level}")
             
     def on_timer_expired(self):
         """
@@ -409,7 +448,7 @@ class GameController(QObject):
         - Stop game activity
         - Trigger bomb explosion animation
         - Display game over message
-        - Provide option to retry level
+        - Show restart button for retry option
         """
         self.game_active = False
         
@@ -417,6 +456,9 @@ class GameController(QObject):
         
         # Update UI
         self.code_editor.update_status("💥 BOOM! Timer expired!", "error")
+        
+        # Show restart button so user can try again
+        self.code_editor.show_restart_button()
         
         # Emit game over signal
         self.game_over.emit("Time expired - Bomb exploded!")
