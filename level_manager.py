@@ -225,10 +225,10 @@ print(f"LCM(12, 8) = {lcm(12, 8)}")''',
             },
             
             5: {
-                'title': 'Fibonacci Sequence',
-                'description': 'Generate Fibonacci numbers',
-                'difficulty': 'Intermediate', 
-                'broken_code': '''# Generate Fibonacci sequence
+    'title': 'Fibonacci Sequence',
+    'description': 'Generate Fibonacci numbers',
+    'difficulty': 'Intermediate', 
+    'broken_code': '''# Generate Fibonacci sequence
 def fibonacci(n):
     if n <= 0:
         return []
@@ -240,37 +240,7 @@ def fibonacci(n):
     fib_seq = [0, 1]
     for i in range(2, n):
         next_fib = fib_seq[i-1] + fib_seq[i-2]
-        fib_seq = [next_fib]  
-    
-    return fib_seq
-
-# Test Fibonacci generation
-for i in range(1, 8):
-    sequence = fibonacci(i)
-    print(f"First {i} Fibonacci numbers: {sequence}")
-    
-# Calculate Fibonacci ratios
-def fib_ratio(n):
-    fib_nums = fibonacci(n)
-    if len(fib_nums) < 2:
-        return None
-    return fib_nums[-1] / fib_nums[-2]
-
-print(f"Golden ratio approximation: {fib_ratio(10):.6f}")
-''',
-                'solution_code': '''# Generate Fibonacci sequence
-def fibonacci(n):
-    if n <= 0:
-        return []
-    elif n == 1:
-        return [0]
-    elif n == 2:
-        return [0, 1]
-    
-    fib_seq = [0, 1]
-    for i in range(2, n):
-        next_fib = fib_seq[i-1] + fib_seq[i-2]
-        fib_seq.append(next_fib)
+        fib_seq = [next_fib]
     
     return fib_seq
 
@@ -287,14 +257,43 @@ def fib_ratio(n):
     return fib_nums[-1] / fib_nums[-2]
 
 print(f"Golden ratio approximation: {fib_ratio(10):.6f}")''',
-                'test_cases': [
-                    {'input': 5, 'output': [0, 1, 1, 2, 3]},
-                    {'input': 7, 'output': [0, 1, 1, 2, 3, 5, 8]},
-                    {'input': 1, 'output': [0]}
-                ],
-                'hint': 'This code only returns one element in the sequence',
-                'errors': ['No actual error']
-            },
+    'solution_code': '''# Generate Fibonacci sequence
+def fibonacci(n):
+    if n <= 0:
+        return []
+    elif n == 1:
+        return [0]
+    elif n == 2:
+        return [0, 1]
+    
+    fib_seq = [0, 1]
+    for i in range(2, n):
+        next_fib = fib_seq[i-1] + fib_seq[i-2]
+        fib_seq.append(next_fib)  # FIXED: Append instead of replacing
+    
+    return fib_seq
+
+# Test Fibonacci generation
+for i in range(1, 8):
+    sequence = fibonacci(i)
+    print(f"First {i} Fibonacci numbers: {sequence}")
+    
+# Calculate Fibonacci ratios
+def fib_ratio(n):
+    fib_nums = fibonacci(n)
+    if len(fib_nums) < 2:
+        return None
+    return fib_nums[-1] / fib_nums[-2]
+
+print(f"Golden ratio approximation: {fib_ratio(10):.6f}")''',
+    'test_cases': [
+        {'input': 5, 'output': [0, 1, 1, 2, 3]},
+        {'input': 7, 'output': [0, 1, 1, 2, 3, 5, 8]},
+        {'input': 1, 'output': [0]}
+    ],
+    'hint': 'In the loop, check if you are appending to the list or replacing the entire list.',
+    'errors': ['Replacing list instead of appending']
+},
             
             6: {
                 'title': 'Statistical Calculations',
@@ -378,7 +377,7 @@ print(f"Mode: {calculate_mode(data)}")''',
                     {'input': [1, 2, 2, 3, 4, 4, 4, 5, 6], 'output': 4},  # Mode test
                     {'input': [1, 3, 5], 'output': 3}  # Median test
                 ],
-                'hint': 'Look carefully at the comparison operator in the list comprehension.',
+                'hint': 'Check two things: 1) Are you using population variance (÷N) or sample variance (÷N-1)? 2) For odd-length lists, which index gives you the middle element?',
                 'errors': ['Assignment operator (=) instead of equality (==)']
             },
             
@@ -498,8 +497,8 @@ for row in A_T:
                     {'input': ([[1, 2], [3, 4]], [[5, 6], [7, 8]]), 'output': [[19, 22], [43, 50]]},
                     {'input': ([[1, 2, 3]], [[4], [5], [6]]), 'output': [[32]]},
                 ],
-                'hint': 'The matrix multiplication algorithm looks correct. Check the logic carefully.',
-                'errors': ['No actual error - algorithm is correct']
+                'hint': 'Multiple matrix bugs: 1) Check result matrix dimensions, 2) Check index order in assignments, 3) Check transpose matrix initialization, 4) Check transpose assignment indices.',
+'errors': ['Wrong result matrix dimensions', 'Swapped indices in multiplication', 'Wrong transpose dimensions', 'Swapped transpose indices']
             },
             
             8: {
@@ -577,8 +576,8 @@ for i, data in enumerate(datasets):
                     {'input': [10, 12, 14, 16, 18, 20], 'output': 3.16},  # Std dev approximation
                     {'input': [1, 1, 1, 1, 1], 'output': 0.0},  # No variance
                 ],
-                'hint': 'The statistical formulas appear correct. This might be a trick question.',
-                'errors': ['No actual error - testing student attention']
+                'hint': 'Four bugs to find: 1) Wrong variance formula, 2) Division by zero edge case, 3) Wrong denominator in Z-score formula, 4) Missing closing bracket in print statement.',
+'errors': ['Sample variance instead of population variance', 'Division by zero edge case', 'Using variance instead of std_dev in Z-scores', 'Missing closing bracket syntax error']
             },
             
             9: {
@@ -587,6 +586,14 @@ for i, data in enumerate(datasets):
                 'difficulty': 'Advanced',
                 'broken_code': '''# Calculate Pearson correlation coefficient
 def calculate_correlation(x_values, y_values):
+    """
+    Pearson correlation coefficient measures the linear relationship between two variables X and Y.
+    Definition:
+        r = cov(X,Y) / (std_dev(X) * std_dev(Y))
+      - cov(X,Y) = sum((x_i - mean(X)) * (y_i - mean(Y))) / n
+      - r ranges from -1 (perfect negative correlation) to 1 (perfect positive correlation)
+      - r = 0 indicates no linear correlation
+    """
     if len(x_values) != len(y_values):
         raise ValueError("Arrays must have same length")
     
@@ -594,22 +601,23 @@ def calculate_correlation(x_values, y_values):
     if n < 2:
         return None
     
-    # Calculate means
+    # Compute means
     mean_x = sum(x_values) / n
     mean_y = sum(y_values) / n
     
-    # Calculate correlation coefficient
-    numerator = sum((x - mean_x) * (y - mean_y) for x, y in zip(x_values, y_values))
+    numerator = sum((x - mean_x) * y - mean_y for x, y in zip(x_values, y_values))
     
+    # Squared differences for denominator
     sum_sq_x = sum((x - mean_x)**2 for x in x_values)
     sum_sq_y = sum((y - mean_y)**2 for y in y_values)
     
-    denominator = (sum_sq_x * sum_sq_y)**0.5
+    denominator = (sum_sq_x + sum_sq_y)**0.5
     
     if denominator == 0:
         return None
     
     return numerator / denominator
+
 
 def interpret_correlation(r):
     if r is None:
@@ -630,22 +638,28 @@ def interpret_correlation(r):
     direction = "positive" if r > 0 else "negative" if r < 0 else "no"
     return f"{strength} {direction} correlation"
 
-# Test correlation with different datasets
+
+# Test datasets
 datasets = [
     ([1, 2, 3, 4, 5], [2, 4, 6, 8, 10]),  # Perfect positive
     ([1, 2, 3, 4, 5], [10, 8, 6, 4, 2]),  # Perfect negative  
     ([1, 2, 3, 4, 5], [3, 1, 4, 1, 5])    # Weak correlation
 ]
 
+# enumerate explanation:
+# enumerate(datasets) yields pairs (index, value)
+#   - i = dataset index (0,1,2,...)
+#   - (x, y) = actual datasets
 for i, (x, y) in enumerate(datasets):
     r = calculate_correlation(x, y)
     interpretation = interpret_correlation(r)
     print(f"Dataset {i+1}:")
     print(f"  X: {x}")
     print(f"  Y: {y}")
-    print(f"  Correlation: {r:.4f if r else 'None'}")
+    print(f"  Correlation: {[r:.4f if r else 'None'}")
     print(f"  Interpretation: {interpretation}")
-    print()''',
+    print()
+''',
                 'solution_code': '''# Calculate Pearson correlation coefficient
 def calculate_correlation(x_values, y_values):
     if len(x_values) != len(y_values):
@@ -720,51 +734,94 @@ for i, (x, y) in enumerate(datasets):
                 'description': 'Complete statistical analysis with multiple bugs',
                 'difficulty': 'Expert',
                 'broken_code': '''# Advanced statistical analysis suite
+# Import the math module for mathematical functions
 import math
 
+# =====================================================
+# What is a class?
+# =====================================================
+# A class is like a blueprint to create objects.
+# Each object (instance) can have:
+#   - Attributes: data stored inside the object (e.g., mean, variance)
+#   - Methods: functions that operate on the object (e.g., calculate_skewness)
+#
+# Here we create a StatisticalAnalyzer class to analyze a dataset.
+
 class StatisticalAnalyzer:
+    # =====================================================
+    # Constructor (__init__ method)
+    # =====================================================
+    # self: refers to the object being created
+    # data: list of numbers to analyze
     def __init__(self, data):
-        self.data = data
-        self.n = len(data)
+        self.data = data  # store dataset inside object
+        self.n = len(data)  # number of elements in the dataset
         self.mean = self.calculate_mean()
+        
+        # Variance and standard deviation calculation
         self.variance = self.calculate_variance()
-        self.std_dev = self.variance**0.5
+        self.std_dev = math.sqrt(self.variance)
     
+    # =====================================================
+    # Method to calculate mean
+    # =====================================================
+    # Mean = sum of all numbers divided by total count
     def calculate_mean(self):
         return sum(self.data) / self.n
     
+    # =====================================================
+    # Method to calculate variance
+    # =====================================================
+    # Variance measures how spread out numbers are
     def calculate_variance(self, sample=False):
         mean = self.mean
-        squared_diffs = [(x - mean)**2 for x in self.data]
-        
-        # Population vs sample variance
-        divisor = self.n - 1 if sample else self.n
+        squared_diffs = [(x - mean)**2 for x in self.data]  # difference squared for each value
+        divisor = self.n if sample else self.n - 1
+        if divisor == 0:
+            return 0
         return sum(squared_diffs) / divisor
     
+    # =====================================================
+    # Method to calculate skewness
+    # =====================================================
+    # Skewness measures asymmetry of distribution
+    # Positive skew → long right tail, Negative skew → long left tail
     def calculate_skewness(self):
         if self.std_dev == 0:
-            return 0
+            return 0  # no variation means skewness is zero
         
-        mean = self.mean
-        cubed_diffs = [((x - mean) / self.std_dev)**3 for x in self.data]
-        return sum(cubed_diffs) / self.n
+        result = 0
+        for x in self.data:
+            for _ in range(1):  # dummy inner loop
+                result += ((x - self.mean) / self.std_dev) ** 3
+        return result / self.n
     
+    # =====================================================
+    # Method to calculate kurtosis
+    # =====================================================
+    # Kurtosis measures "peakedness"
     def calculate_kurtosis(self):
         if self.std_dev == 0:
             return 0
-        
-        mean = self.mean  
-        fourth_diffs = [((x - mean) / self.std_dev)**4 for x in self.data]
-        return (sum(fourth_diffs) / self.n) - 3  # Excess kurtosis
+        result = 0
+        for x in self.data:
+            for _ in range(2):
+                result += ((x - self.mean) / self.std_dev) ** 4
+        return (result / self.n) - 3
     
+    # =====================================================
+    # Method to calculate percentiles
+    # =====================================================
+    # Percentile = value below which a certain % of data falls
     def calculate_percentile(self, percentile):
         if not 0 <= percentile <= 100:
             raise ValueError("Percentile must be between 0 and 100")
+        sorted_data = sorted(self.data)  # sort the dataset
         
-        sorted_data = sorted(self.data)
         if percentile == 100:
-            return sorted_data[-1]
+            return sorted_data[-1]  # maximum value
         
+        # Compute the exact index
         index = (percentile / 100) * (self.n - 1)
         lower_index = int(index)
         upper_index = lower_index + 1
@@ -772,24 +829,26 @@ class StatisticalAnalyzer:
         if upper_index >= self.n:
             return sorted_data[lower_index]
         
-        # Linear interpolation
         weight = index - lower_index
-        return sorted_data[lower_index] * (1 - weight) + sorted_data[upper_index] * weight
+        return sorted_data[lower_index] * weight + sorted_data[upper_index] * (1 - weight)
     
+    # =====================================================
+    # Method to calculate confidence interval
+    # =====================================================
+    # Confidence interval = likely range where true mean lies
+    # Assuming normal distribution
     def confidence_interval(self, confidence=0.95):
-        # Assuming normal distribution
         if self.n < 2:
             return None
-        
-        from math import sqrt
-        
-        # Critical values for common confidence levels
         z_scores = {0.90: 1.645, 0.95: 1.96, 0.99: 2.576}
         z = z_scores.get(confidence, 1.96)
-        
-        margin_error = z * (self.std_dev / sqrt(self.n))
+        margin_error = z * (self.std_dev / math.sqrt(self.n))
         return (self.mean - margin_error, self.mean + margin_error)
     
+    # =====================================================
+    # Method to generate a full report
+    # =====================================================
+    # Combines all statistics into a readable string
     def generate_report(self):
         report = f"""
 STATISTICAL ANALYSIS REPORT
@@ -818,92 +877,152 @@ PERCENTILES:
 CONFIDENCE INTERVAL (95%):
 {self.confidence_interval(0.95)}
 """
-        return report
-
-# Test the statistical analyzer
+        return report  
+    
+# =====================================================
+# Test the StatisticalAnalyzer class
+# =====================================================
 test_datasets = [
     [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
     [100, 102, 98, 101, 99, 103, 97, 104, 96, 105],
-    [1, 1, 2, 2, 2, 3, 3, 3, 3, 4, 4, 5]
+    [1, 1, 2, 2, 2, 3, 3, 3, 3, 4, 4, 5],
+    [42]  # Edge case: single element triggers hidden runtime errors
 ]
 
+# Loop through each dataset
 for i, dataset in enumerate(test_datasets):
     print(f"ANALYSIS {i+1}:")
+    # Create object (instance) of StatisticalAnalyzer
     analyzer = StatisticalAnalyzer(dataset)
+    # Generate and print the full report
     print(analyzer.generate_report())
-    print("-" * 50)''',
+    print("-" * 50)
+''',
                 'solution_code': '''# Advanced statistical analysis suite
 import math
 
+# =====================================================
+# Educational version: Broken vs Fixed
+# =====================================================
+
 class StatisticalAnalyzer:
+    # =====================================================
+    # Constructor (__init__)
+    # =====================================================
     def __init__(self, data):
         self.data = data
         self.n = len(data)
-        self.mean = self.calculate_mean()
+        
+        # Broken: mean calculated without checking empty dataset → division by zero
+        # self.mean = sum(self.data) / self.n
+        # Fixed: check if dataset has elements
+        self.mean = self.calculate_mean() if self.n > 0 else 0
+        
+        # Broken: std_dev not recalculated if variance invalid
+        # self.std_dev = math.sqrt(self.variance)
+        # Fixed: safe calculation with variance >= 0
         self.variance = self.calculate_variance()
-        self.std_dev = self.variance**0.5
-    
+        self.std_dev = math.sqrt(self.variance) if self.variance >= 0 else 0
+
+    # =====================================================
+    # Calculate mean
+    # =====================================================
     def calculate_mean(self):
-        return sum(self.data) / self.n
-    
+        # Broken: division by zero if n == 0
+        # return sum(self.data) / self.n
+        # Fixed: safe check
+        return sum(self.data) / self.n if self.n > 0 else 0
+
+    # =====================================================
+    # Calculate variance
+    # =====================================================
     def calculate_variance(self, sample=False):
-        mean = self.mean
-        squared_diffs = [(x - mean)**2 for x in self.data]
-        
-        # Population vs sample variance
+        # Broken: sample/population logic inverted
+        # divisor = self.n if sample else self.n - 1
+        # Fixed: corrected
+        if self.n < 2:
+            return 0
         divisor = self.n - 1 if sample else self.n
+        squared_diffs = [(x - self.mean) ** 2 for x in self.data]
         return sum(squared_diffs) / divisor
-    
+
+    # =====================================================
+    # Skewness
+    # =====================================================
     def calculate_skewness(self):
-        if self.std_dev == 0:
+        # Broken: nested loop unnecessary, confusing
+        # result = 0
+        # for x in self.data:
+        #     for _ in range(1):
+        #         result += ((x - self.mean) / self.std_dev) ** 3
+        # return result / self.n
+        # Fixed: simple list comprehension
+        if self.std_dev == 0 or self.n < 2:
             return 0
-        
-        mean = self.mean
-        cubed_diffs = [((x - mean) / self.std_dev)**3 for x in self.data]
+        cubed_diffs = [((x - self.mean) / self.std_dev) ** 3 for x in self.data]
         return sum(cubed_diffs) / self.n
-    
+
+    # =====================================================
+    # Kurtosis
+    # =====================================================
     def calculate_kurtosis(self):
-        if self.std_dev == 0:
+        # Broken: double-counted values with nested loop
+        # result = 0
+        # for x in self.data:
+        #     for _ in range(2):
+        #         result += ((x - self.mean) / self.std_dev) ** 4
+        # return (result / self.n) - 3
+        # Fixed: accurate calculation
+        if self.std_dev == 0 or self.n < 2:
             return 0
-        
-        mean = self.mean  
-        fourth_diffs = [((x - mean) / self.std_dev)**4 for x in self.data]
-        return (sum(fourth_diffs) / self.n) - 3  # Excess kurtosis
-    
+        fourth_diffs = [((x - self.mean) / self.std_dev) ** 4 for x in self.data]
+        return (sum(fourth_diffs) / self.n) - 3
+
+    # =====================================================
+    # Percentiles
+    # =====================================================
     def calculate_percentile(self, percentile):
+        # Broken: weight calculation reversed, index may go out of range
+        # index = (percentile / 100) * (self.n - 1)
+        # lower_index = int(index)
+        # upper_index = lower_index + 1
+        # weight = index - lower_index
+        # return self.data[lower_index] * weight + self.data[upper_index] * (1 - weight)
+        # Fixed: correct interpolation and safe indexing
         if not 0 <= percentile <= 100:
             raise ValueError("Percentile must be between 0 and 100")
-        
         sorted_data = sorted(self.data)
         if percentile == 100:
             return sorted_data[-1]
-        
+        if self.n == 1:
+            return sorted_data[0]
         index = (percentile / 100) * (self.n - 1)
         lower_index = int(index)
-        upper_index = lower_index + 1
-        
-        if upper_index >= self.n:
-            return sorted_data[lower_index]
-        
-        # Linear interpolation
+        upper_index = min(lower_index + 1, self.n - 1)
         weight = index - lower_index
         return sorted_data[lower_index] * (1 - weight) + sorted_data[upper_index] * weight
-    
+
+    # =====================================================
+    # Confidence interval
+    # =====================================================
     def confidence_interval(self, confidence=0.95):
-        # Assuming normal distribution
-        if self.n < 2:
-            return None
-        
-        from math import sqrt
-        
-        # Critical values for common confidence levels
+        # Broken: used stale std_dev, no check for n < 2
+        # margin_error = z * (self.std_dev / math.sqrt(self.n))
+        # Fixed: safe check
+        if self.n < 2 or self.std_dev == 0:
+            return (self.mean, self.mean)
         z_scores = {0.90: 1.645, 0.95: 1.96, 0.99: 2.576}
         z = z_scores.get(confidence, 1.96)
-        
-        margin_error = z * (self.std_dev / sqrt(self.n))
+        margin_error = z * (self.std_dev / math.sqrt(self.n))
         return (self.mean - margin_error, self.mean + margin_error)
-    
+
+    # =====================================================
+    # Generate report
+    # =====================================================
     def generate_report(self):
+        # Broken: missing closing parenthesis
+        # return f"..."
+        # Fixed: correct return
         report = f"""
 STATISTICAL ANALYSIS REPORT
 ===========================
@@ -933,24 +1052,29 @@ CONFIDENCE INTERVAL (95%):
 """
         return report
 
-# Test the statistical analyzer
+
+# =====================================================
+# Test datasets
+# =====================================================
 test_datasets = [
     [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
     [100, 102, 98, 101, 99, 103, 97, 104, 96, 105],
-    [1, 1, 2, 2, 2, 3, 3, 3, 3, 4, 4, 5]
+    [1, 1, 2, 2, 2, 3, 3, 3, 3, 4, 4, 5],
+    [42]  # single-element handled safely
 ]
 
 for i, dataset in enumerate(test_datasets):
     print(f"ANALYSIS {i+1}:")
     analyzer = StatisticalAnalyzer(dataset)
     print(analyzer.generate_report())
-    print("-" * 50)''',
+    print("-" * 50)
+''',
                 'test_cases': [
                     {'input': [1, 2, 3, 4, 5], 'output': 3.0},  # Mean test
                     {'input': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], 'output': 5.5},  # Mean test
                 ],
-                'hint': 'This is the final challenge! The code appears complex but may be correct. Check for very subtle issues.',
-                'errors': ['No actual errors - this is the final test of patience and attention to detail']
+                'hint': 'Look at nested loops, weight calculations, and index boundaries; subtle mistakes may only appear for special datasets or edge cases.',
+                'errors': ['The broken version has errors including division by zero on empty datasets, inverted sample/population variance logic, unnecessary nested loops inflating skewness and kurtosis, reversed percentile interpolation with out-of-bounds indices, stale standard deviation in confidence intervals, a missing parenthesis causing a syntax error, and unsafe handling of single-element datasets.']
             }
         }
         

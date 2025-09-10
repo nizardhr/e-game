@@ -171,20 +171,16 @@ class GameController(QObject):
         self.bomb_widget.start_timer(time_limit)
         self.level_start_time = time.time()
         
-        # Set up hint timer (30 seconds before timer expires)
-        if time_limit > 30:  # Only set hint if timer is longer than 30 seconds
-            hint_delay = (time_limit - 30) * 1000  # 30 seconds before end, convert to milliseconds
-            QTimer.singleShot(hint_delay, self.activate_hint_system)
-        else:
-            # For very short timers, show hint at 50% time elapsed
-            hint_delay = int(time_limit * 0.5 * 1000)
+        # Set up hint timer
+        if time_limit > 0:  
+            hint_delay = int(time_limit * 0.8 * 1000)
             QTimer.singleShot(hint_delay, self.activate_hint_system)
         
         # Mark game as active
         self.game_active = True
         
         print(f"Started Level {level_number}: {level_data['title']}")
-        print(f"Timer: {time_limit} seconds, Hint in: {(time_limit - 30) if time_limit > 30 else time_limit * 0.5} seconds")
+        print(f"Timer: {time_limit} seconds, Hint in: { time_limit * 0.8} seconds")
         
     def calculate_time_limit(self, level_number):
         """
