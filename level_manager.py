@@ -1286,7 +1286,7 @@ for i, dataset in enumerate(test_datasets):
         print(f"🔍 DEBUG: Starting test execution")
         print(f"🔍 DEBUG: Number of test cases: {len(test_cases)}")
         
-        # Create safe execution environment
+        # Create safe execution environment with class support
         safe_globals = {
             '__builtins__': {
                 # Basic functions
@@ -1299,6 +1299,23 @@ for i, dataset in enumerate(test_datasets):
                 '__import__': __import__,
                 'ImportError': ImportError,
                 'ModuleNotFoundError': ModuleNotFoundError,
+                
+                # Class definition support
+                '__build_class__': __build_class__,
+                'type': type,
+                'object': object,
+                'super': super,
+                'hasattr': hasattr,
+                'getattr': getattr,
+                'setattr': setattr,
+                'isinstance': isinstance,
+                'issubclass': issubclass,
+                
+                # Exception handling
+                'Exception': Exception,
+                'ValueError': ValueError,
+                'TypeError': TypeError,
+                'AttributeError': AttributeError,
             },
             
             # Pre-import common modules
