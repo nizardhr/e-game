@@ -1213,79 +1213,67 @@ for i, dataset in enumerate(test_datasets):
         RETURNS:
         - List of test results with pass/fail status
         
-        SAFETY MEASURES:
-        - Execute in restricted namespace
-        - Capture exceptions and errors
-        - Prevent infinite loops or dangerous operations
+        HANDLES MULTI-FUNCTION LEVELS 6-10 WITH SPECIFIC LOGIC FOR EACH
         """
         results = []
+        
+        # DEBUG: Print what we're testing
+        print(f"🔍 DEBUG: Starting test execution")
+        print(f"🔍 DEBUG: Number of test cases: {len(test_cases)}")
         
         # Create safe execution environment
         safe_globals = {
             '__builtins__': {
+                # Basic functions
                 'len': len, 'sum': sum, 'min': min, 'max': max, 'abs': abs,
                 'round': round, 'int': int, 'float': float, 'str': str,
                 'list': list, 'dict': dict, 'range': range, 'enumerate': enumerate,
                 'zip': zip, 'sorted': sorted, 'print': print,
-                'math': math, 'statistics': statistics
+                
+                # Import functionality
+                '__import__': __import__,
+                'ImportError': ImportError,
+                'ModuleNotFoundError': ModuleNotFoundError,
             },
+            
+            # Pre-import common modules
             'math': math,
-            'statistics': statistics
+            'statistics': statistics,
+            
+            # Make sure __name__ is available
+            '__name__': '__main__',
         }
-        
         try:
             # Execute the code in safe environment
+            print(f"🔍 DEBUG: Executing user code...")
             exec(code, safe_globals)
             
-            # Run each test case
-            for i, test_case in enumerate(test_cases):
-                try:
-                    # Extract the main function name from code
-                    main_function = self.extract_main_function(code)
-                    
-                    if main_function and main_function in safe_globals:
-                        func = safe_globals[main_function]
-                        test_input = test_case['input']
-                        expected_output = test_case['output']
-                        
-                        # Handle different input types
-                        if isinstance(test_input, tuple):
-                            actual_output = func(*test_input)
-                        else:
-                            actual_output = func(test_input)
-                        
-                        # Compare outputs (with tolerance for floating point)
-                        passed = self.compare_outputs(actual_output, expected_output)
-                        
-                        results.append({
-                            'test_number': i + 1,
-                            'passed': passed,
-                            'input': test_input,
-                            'expected': expected_output,
-                            'actual': actual_output,
-                            'error': None if passed else f'Expected {expected_output}, got {actual_output}'
-                        })
-                    else:
-                        results.append({
-                            'test_number': i + 1,
-                            'passed': False,
-                            'input': test_case['input'],
-                            'expected': test_case['output'],
-                            'actual': None,
-                            'error': f'Function {main_function} not found'
-                        })
-                        
-                except Exception as e:
-                    results.append({
-                        'test_number': i + 1,
-                        'passed': False,
-                        'input': test_case['input'],
-                        'expected': test_case['output'], 
-                        'actual': None,
-                        'error': f'Test execution error: {str(e)}'
-                    })
-                    
+            # DEBUG: Print available functions
+            available_functions = [key for key in safe_globals.keys() 
+                                 if callable(safe_globals.get(key)) and not key.startswith('_')]
+            print(f"🔍 DEBUG: Available functions after execution: {available_functions}")
+            
+            # Determine which level we're testing based on available functions
+            level_type = self.detect_level_type(safe_globals)
+            print(f"🔍 DEBUG: Detected level type: {level_type}")
+            
+            # Run tests based on level type
+            if level_type == "level_6":
+                results = self.run_level_6_tests(safe_globals, test_cases)
+            elif level_type == "level_7":
+                results = self.run_level_7_tests(safe_globals, test_cases)
+            elif level_type == "level_8":
+                results = self.run_level_8_tests(safe_globals, test_cases)
+            elif level_type == "level_9":
+                results = self.run_level_9_tests(safe_globals, test_cases)
+            elif level_type == "level_10":
+                results = self.run_level_10_tests(safe_globals, test_cases)
+            else:
+                # Fallback to single function testing for levels 1-5
+                results = self.run_single_function_tests(safe_globals, code, test_cases)
+                
         except Exception as e:
+            print(f"🔍 DEBUG: Code execution failed entirely: {str(e)}")
             # Code execution failed entirely
             for i, test_case in enumerate(test_cases):
                 results.append({
@@ -1296,7 +1284,493 @@ for i, dataset in enumerate(test_datasets):
                     'actual': None,
                     'error': f'Code execution failed: {str(e)}'
                 })
-                
+        
+        print(f"🔍 DEBUG: Final test results summary: {len([r for r in results if r['passed']])}/{len(results)} passed")
+        return results
+    
+    def detect_level_type(self, safe_globals: dict) -> str:
+        """Detect which level based on available functions"""
+        functions = set(key for key in safe_globals.keys() if callable(safe_globals.get(key)) and not key.startswith('_'))
+        
+        # Level 6: Statistical calculations
+        if {'calculate_mean', 'calculate_median', 'calculate_variance', 'calculate_std_dev'}.issubset(functions):
+            return "level_6"
+        
+        # Level 7: Matrix operations
+        if {'matrix_multiply', 'matrix_transpose'}.issubset(functions):
+            return "level_7"
+        
+        # Level 8: Standard deviation calculator
+        if {'calculate_variance', 'calculate_std_dev', 'calculate_z_scores'}.issubset(functions):
+            return "level_8"
+        
+        # Level 9: Correlation coefficient
+        if {'calculate_correlation', 'interpret_correlation'}.issubset(functions):
+            return "level_9"
+        
+        # Level 10: Advanced statistics suite (class-based)
+        if 'StatisticalAnalyzer' in safe_globals:
+            return "level_10"
+        
+        return "single_function"
+    
+    def run_level_6_tests(self, safe_globals: dict, test_cases: List[Dict]) -> List[Dict]:
+        """Run tests for Level 6 - Statistical calculations"""
+        results = []
+        
+        # Test data for Level 6
+        test_data_1 = [1, 2, 2, 3, 4, 4, 4, 5, 6]
+        test_data_2 = [1, 2, 3, 4, 5]
+        test_data_3 = [1, 2, 3, 4]  # Even length for median
+        test_data_4 = [2, 2, 2, 2]  # No variance
+        
+        test_scenarios = [
+            # Mean tests
+            {'func': 'calculate_mean', 'input': test_data_1, 'expected': 3.44, 'desc': 'Mean of test_data_1'},
+            {'func': 'calculate_mean', 'input': test_data_2, 'expected': 3.0, 'desc': 'Mean of test_data_2'},
+            
+            # Median tests
+            {'func': 'calculate_median', 'input': test_data_1, 'expected': 4, 'desc': 'Median of test_data_1 (odd length)'},
+            {'func': 'calculate_median', 'input': test_data_2, 'expected': 3, 'desc': 'Median of test_data_2 (odd length)'},
+            {'func': 'calculate_median', 'input': test_data_3, 'expected': 2.5, 'desc': 'Median of test_data_3 (even length)'},
+            
+            # Variance tests (population variance)
+            {'func': 'calculate_variance', 'input': test_data_2, 'expected': 2.0, 'desc': 'Variance of test_data_2'},
+            {'func': 'calculate_variance', 'input': test_data_4, 'expected': 0.0, 'desc': 'Variance of identical numbers'},
+            
+            # Standard deviation tests
+            {'func': 'calculate_std_dev', 'input': test_data_2, 'expected': 1.41, 'desc': 'Std dev of test_data_2'},
+            {'func': 'calculate_std_dev', 'input': test_data_4, 'expected': 0.0, 'desc': 'Std dev of identical numbers'},
+        ]
+        
+        for i, scenario in enumerate(test_scenarios):
+            try:
+                func_name = scenario['func']
+                if func_name in safe_globals:
+                    func = safe_globals[func_name]
+                    actual_output = func(scenario['input'])
+                    
+                    print(f"🔍 DEBUG: {scenario['desc']}: {func_name}({scenario['input']}) = {actual_output}, expected = {scenario['expected']}")
+                    
+                    passed = self.compare_outputs(actual_output, scenario['expected'])
+                    
+                    results.append({
+                        'test_number': i + 1,
+                        'passed': passed,
+                        'input': scenario['input'],
+                        'expected': scenario['expected'],
+                        'actual': actual_output,
+                        'error': None if passed else f'Expected {scenario["expected"]}, got {actual_output}'
+                    })
+                else:
+                    results.append({
+                        'test_number': i + 1,
+                        'passed': False,
+                        'input': scenario['input'],
+                        'expected': scenario['expected'],
+                        'actual': None,
+                        'error': f'Function {func_name} not found'
+                    })
+            except Exception as e:
+                results.append({
+                    'test_number': i + 1,
+                    'passed': False,
+                    'input': scenario['input'],
+                    'expected': scenario['expected'],
+                    'actual': None,
+                    'error': f'Test execution error: {str(e)}'
+                })
+        
+        return results
+    
+    def run_level_7_tests(self, safe_globals: dict, test_cases: List[Dict]) -> List[Dict]:
+        """Run tests for Level 7 - Matrix operations"""
+        results = []
+        
+        test_scenarios = [
+            # Matrix multiplication tests
+            {
+                'func': 'matrix_multiply',
+                'input': ([[1, 2], [3, 4]], [[5, 6], [7, 8]]),
+                'expected': [[19, 22], [43, 50]],
+                'desc': 'Matrix multiplication 2x2'
+            },
+            {
+                'func': 'matrix_multiply', 
+                'input': ([[1, 2, 3]], [[4], [5], [6]]),
+                'expected': [[32]],
+                'desc': 'Matrix multiplication 1x3 * 3x1'
+            },
+            
+            # Matrix transpose tests
+            {
+                'func': 'matrix_transpose',
+                'input': [[1, 2, 3], [4, 5, 6]],
+                'expected': [[1, 4], [2, 5], [3, 6]],
+                'desc': 'Matrix transpose 2x3'
+            },
+            {
+                'func': 'matrix_transpose',
+                'input': [[1, 2], [3, 4], [5, 6]],
+                'expected': [[1, 3, 5], [2, 4, 6]],
+                'desc': 'Matrix transpose 3x2'
+            },
+        ]
+        
+        for i, scenario in enumerate(test_scenarios):
+            try:
+                func_name = scenario['func']
+                if func_name in safe_globals:
+                    func = safe_globals[func_name]
+                    
+                    if isinstance(scenario['input'], tuple):
+                        actual_output = func(*scenario['input'])
+                    else:
+                        actual_output = func(scenario['input'])
+                    
+                    print(f"🔍 DEBUG: {scenario['desc']}: {actual_output}")
+                    
+                    passed = self.compare_outputs(actual_output, scenario['expected'])
+                    
+                    results.append({
+                        'test_number': i + 1,
+                        'passed': passed,
+                        'input': scenario['input'],
+                        'expected': scenario['expected'],
+                        'actual': actual_output,
+                        'error': None if passed else f'Expected {scenario["expected"]}, got {actual_output}'
+                    })
+                else:
+                    results.append({
+                        'test_number': i + 1,
+                        'passed': False,
+                        'input': scenario['input'],
+                        'expected': scenario['expected'],
+                        'actual': None,
+                        'error': f'Function {func_name} not found'
+                    })
+            except Exception as e:
+                results.append({
+                    'test_number': i + 1,
+                    'passed': False,
+                    'input': scenario['input'],
+                    'expected': scenario['expected'],
+                    'actual': None,
+                    'error': f'Test execution error: {str(e)}'
+                })
+        
+        return results
+    
+    def run_level_8_tests(self, safe_globals: dict, test_cases: List[Dict]) -> List[Dict]:
+        """Run tests for Level 8 - Standard deviation calculator"""
+        results = []
+        
+        test_scenarios = [
+            # Standard deviation tests
+            {
+                'func': 'calculate_std_dev',
+                'input': [10, 12, 14, 16, 18, 20],
+                'expected': 3.16,  # Approximation
+                'desc': 'Standard deviation of evenly spaced numbers'
+            },
+            {
+                'func': 'calculate_std_dev',
+                'input': [1, 1, 1, 1, 1],
+                'expected': 0.0,
+                'desc': 'Standard deviation of identical numbers'
+            },
+            
+            # Z-scores tests
+            {
+                'func': 'calculate_z_scores',
+                'input': [1, 2, 3, 4, 5],
+                'expected': [-1.41, -0.71, 0.0, 0.71, 1.41],  # Approximations
+                'desc': 'Z-scores of simple sequence'
+            },
+            {
+                'func': 'calculate_z_scores',
+                'input': [1, 1, 1, 1, 1],
+                'expected': [0, 0, 0, 0, 0],
+                'desc': 'Z-scores of identical numbers'
+            },
+        ]
+        
+        for i, scenario in enumerate(test_scenarios):
+            try:
+                func_name = scenario['func']
+                if func_name in safe_globals:
+                    func = safe_globals[func_name]
+                    actual_output = func(scenario['input'])
+                    
+                    print(f"🔍 DEBUG: {scenario['desc']}: {actual_output}")
+                    
+                    if func_name == 'calculate_z_scores':
+                        # Compare z-scores with tolerance for each element
+                        passed = len(actual_output) == len(scenario['expected'])
+                        if passed:
+                            for actual, expected in zip(actual_output, scenario['expected']):
+                                if not self.compare_outputs(actual, expected, tolerance=0.1):
+                                    passed = False
+                                    break
+                    else:
+                        passed = self.compare_outputs(actual_output, scenario['expected'])
+                    
+                    results.append({
+                        'test_number': i + 1,
+                        'passed': passed,
+                        'input': scenario['input'],
+                        'expected': scenario['expected'],
+                        'actual': actual_output,
+                        'error': None if passed else f'Expected {scenario["expected"]}, got {actual_output}'
+                    })
+                else:
+                    results.append({
+                        'test_number': i + 1,
+                        'passed': False,
+                        'input': scenario['input'],
+                        'expected': scenario['expected'],
+                        'actual': None,
+                        'error': f'Function {func_name} not found'
+                    })
+            except Exception as e:
+                results.append({
+                    'test_number': i + 1,
+                    'passed': False,
+                    'input': scenario['input'],
+                    'expected': scenario['expected'],
+                    'actual': None,
+                    'error': f'Test execution error: {str(e)}'
+                })
+        
+        return results
+    
+    def run_level_9_tests(self, safe_globals: dict, test_cases: List[Dict]) -> List[Dict]:
+        """Run tests for Level 9 - Correlation coefficient"""
+        results = []
+        
+        test_scenarios = [
+            # Perfect positive correlation
+            {
+                'func': 'calculate_correlation',
+                'input': ([1, 2, 3, 4, 5], [2, 4, 6, 8, 10]),
+                'expected': 1.0,
+                'desc': 'Perfect positive correlation'
+            },
+            
+            # Perfect negative correlation
+            {
+                'func': 'calculate_correlation',
+                'input': ([1, 2, 3, 4, 5], [10, 8, 6, 4, 2]),
+                'expected': -1.0,
+                'desc': 'Perfect negative correlation'
+            },
+            
+            # Interpretation tests
+            {
+                'func': 'interpret_correlation',
+                'input': 0.95,
+                'expected': "very strong positive correlation",
+                'desc': 'Interpret strong positive correlation'
+            },
+            {
+                'func': 'interpret_correlation',
+                'input': -0.8,
+                'expected': "strong negative correlation",
+                'desc': 'Interpret strong negative correlation'
+            },
+        ]
+        
+        for i, scenario in enumerate(test_scenarios):
+            try:
+                func_name = scenario['func']
+                if func_name in safe_globals:
+                    func = safe_globals[func_name]
+                    
+                    if isinstance(scenario['input'], tuple):
+                        actual_output = func(*scenario['input'])
+                    else:
+                        actual_output = func(scenario['input'])
+                    
+                    print(f"🔍 DEBUG: {scenario['desc']}: {actual_output}")
+                    
+                    passed = self.compare_outputs(actual_output, scenario['expected'])
+                    
+                    results.append({
+                        'test_number': i + 1,
+                        'passed': passed,
+                        'input': scenario['input'],
+                        'expected': scenario['expected'],
+                        'actual': actual_output,
+                        'error': None if passed else f'Expected {scenario["expected"]}, got {actual_output}'
+                    })
+                else:
+                    results.append({
+                        'test_number': i + 1,
+                        'passed': False,
+                        'input': scenario['input'],
+                        'expected': scenario['expected'],
+                        'actual': None,
+                        'error': f'Function {func_name} not found'
+                    })
+            except Exception as e:
+                results.append({
+                    'test_number': i + 1,
+                    'passed': False,
+                    'input': scenario['input'],
+                    'expected': scenario['expected'],
+                    'actual': None,
+                    'error': f'Test execution error: {str(e)}'
+                })
+        
+        return results
+    
+    def run_level_10_tests(self, safe_globals: dict, test_cases: List[Dict]) -> List[Dict]:
+        """Run tests for Level 10 - Advanced statistics suite (class-based)"""
+        results = []
+        
+        test_scenarios = [
+            # Test StatisticalAnalyzer class
+            {
+                'class': 'StatisticalAnalyzer',
+                'init_data': [1, 2, 3, 4, 5],
+                'method': 'calculate_mean',
+                'expected': 3.0,
+                'desc': 'StatisticalAnalyzer mean calculation'
+            },
+            {
+                'class': 'StatisticalAnalyzer',
+                'init_data': [1, 2, 3, 4, 5],
+                'method': 'calculate_percentile',
+                'method_args': [50],
+                'expected': 3.0,
+                'desc': 'StatisticalAnalyzer median (50th percentile)'
+            },
+            {
+                'class': 'StatisticalAnalyzer',
+                'init_data': [1, 2, 3, 4, 5],
+                'method': 'calculate_variance',
+                'expected': 2.0,
+                'desc': 'StatisticalAnalyzer variance calculation'
+            },
+        ]
+        
+        for i, scenario in enumerate(test_scenarios):
+            try:
+                class_name = scenario['class']
+                if class_name in safe_globals:
+                    cls = safe_globals[class_name]
+                    
+                    # Create instance
+                    instance = cls(scenario['init_data'])
+                    
+                    # Call method
+                    method_name = scenario['method']
+                    if hasattr(instance, method_name):
+                        method = getattr(instance, method_name)
+                        
+                        if 'method_args' in scenario:
+                            actual_output = method(*scenario['method_args'])
+                        else:
+                            actual_output = method()
+                        
+                        print(f"🔍 DEBUG: {scenario['desc']}: {actual_output}")
+                        
+                        passed = self.compare_outputs(actual_output, scenario['expected'])
+                        
+                        results.append({
+                            'test_number': i + 1,
+                            'passed': passed,
+                            'input': scenario['init_data'],
+                            'expected': scenario['expected'],
+                            'actual': actual_output,
+                            'error': None if passed else f'Expected {scenario["expected"]}, got {actual_output}'
+                        })
+                    else:
+                        results.append({
+                            'test_number': i + 1,
+                            'passed': False,
+                            'input': scenario['init_data'],
+                            'expected': scenario['expected'],
+                            'actual': None,
+                            'error': f'Method {method_name} not found in class {class_name}'
+                        })
+                else:
+                    results.append({
+                        'test_number': i + 1,
+                        'passed': False,
+                        'input': scenario.get('init_data', 'N/A'),
+                        'expected': scenario['expected'],
+                        'actual': None,
+                        'error': f'Class {class_name} not found'
+                    })
+            except Exception as e:
+                results.append({
+                    'test_number': i + 1,
+                    'passed': False,
+                    'input': scenario.get('init_data', 'N/A'),
+                    'expected': scenario['expected'],
+                    'actual': None,
+                    'error': f'Test execution error: {str(e)}'
+                })
+        
+        return results
+    
+    def run_single_function_tests(self, safe_globals: dict, code: str, test_cases: List[Dict]) -> List[Dict]:
+        """Run tests for single function levels (1-5)"""
+        results = []
+        
+        # Extract the main function name from code
+        main_function = self.extract_main_function(code)
+        print(f"🔍 DEBUG: Detected main function: {main_function}")
+        
+        for i, test_case in enumerate(test_cases):
+            try:
+                if main_function and main_function in safe_globals:
+                    func = safe_globals[main_function]
+                    test_input = test_case['input']
+                    expected_output = test_case['output']
+                    
+                    print(f"🔍 DEBUG: Calling {main_function}({test_input})")
+                    
+                    # Handle different input types
+                    if isinstance(test_input, tuple):
+                        actual_output = func(*test_input)
+                    else:
+                        actual_output = func(test_input)
+                    
+                    print(f"🔍 DEBUG: Function returned: {actual_output}")
+                    
+                    # Compare outputs
+                    passed = self.compare_outputs(actual_output, expected_output)
+                    
+                    results.append({
+                        'test_number': i + 1,
+                        'passed': passed,
+                        'input': test_input,
+                        'expected': expected_output,
+                        'actual': actual_output,
+                        'error': None if passed else f'Expected {expected_output}, got {actual_output}'
+                    })
+                else:
+                    results.append({
+                        'test_number': i + 1,
+                        'passed': False,
+                        'input': test_case['input'],
+                        'expected': test_case['output'],
+                        'actual': None,
+                        'error': f'Function {main_function} not found'
+                    })
+                    
+            except Exception as e:
+                results.append({
+                    'test_number': i + 1,
+                    'passed': False,
+                    'input': test_case['input'],
+                    'expected': test_case['output'], 
+                    'actual': None,
+                    'error': f'Test execution error: {str(e)}'
+                })
+        
         return results
         
     def extract_main_function(self, code: str) -> Optional[str]:
@@ -1325,7 +1799,7 @@ for i, dataset in enumerate(test_datasets):
             
         return None
         
-    def compare_outputs(self, actual, expected, tolerance=1e-10):
+    def compare_outputs(self, actual, expected, tolerance=0.01):
         """
         COMPARE ACTUAL VS EXPECTED OUTPUT VALUES
         
