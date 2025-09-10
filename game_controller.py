@@ -68,7 +68,6 @@ class GameController(QObject):
         STATE VARIABLES:
         - Current level and progression tracking
         - Timer state and hint availability
-        - Error tracking for wire cutting logic
         - Game completion and failure states
         """
         # Level and progression state
@@ -80,11 +79,7 @@ class GameController(QObject):
         self.level_start_time = None
         self.hint_available = False
         self.hint_shown = False
-        
-        # Error tracking for wire cutting
-        self.errors_found = []
-        self.errors_fixed = []
-        self.total_errors_in_level = 0
+        self.hint_timer = None  # Add hint timer tracking
         
         # Game state flags
         self.game_active = False
@@ -151,17 +146,17 @@ class GameController(QObject):
         self.hint_shown = False
         self.hint_available = False
         
+        # Cancel any existing hint timer
+        if hasattr(self, 'hint_timer') and self.hint_timer:
+            self.hint_timer.stop()
+            self.hint_timer = None
+        
         # Load level data
         level_data = self.level_manager.get_level(level_number)
         
         if not level_data:
             self.game_over.emit(f"Failed to load level {level_number}")
             return
-            
-        # Set level information
-        self.total_errors_in_level = len(level_data['errors'])
-        self.errors_found = []
-        self.errors_fixed = []
         
         # Update UI components
         self.update_level_displays(level_data)
@@ -177,16 +172,19 @@ class GameController(QObject):
         self.bomb_widget.start_timer(time_limit)
         self.level_start_time = time.time()
         
-        # Set up hint timer
+        # Set up hint timer with proper timer instance
         if time_limit > 0:  
-            hint_delay = int(time_limit * 0.8 * 1000)
-            QTimer.singleShot(hint_delay, self.activate_hint_system)
+            hint_delay = int(time_limit * 0.8)  # 80% of time limit in seconds
+            self.hint_timer = QTimer()
+            self.hint_timer.setSingleShot(True)
+            self.hint_timer.timeout.connect(self.activate_hint_system)
+            self.hint_timer.start(hint_delay * 1000)  # Convert to milliseconds
         
         # Mark game as active
         self.game_active = True
         
         print(f"Started Level {level_number}: {level_data['title']}")
-        print(f"Timer: {time_limit} seconds, Hint in: { time_limit * 0.8} seconds")
+        print(f"Timer: {time_limit} seconds, Hint in: {time_limit * 0.8} seconds")
         
     def calculate_time_limit(self, level_number):
         """
@@ -256,8 +254,7 @@ class GameController(QObject):
         - Parse and validate Python syntax
         - Compare with expected solution patterns
         - Execute code with test cases
-        - Track error fixing progress
-        - Trigger wire cutting animations for fixed errors
+        - Trigger wire cutting animations for successful solutions only
         - Emit errors for display when solution is incorrect
         """
         if not self.game_active or self.level_completed_flag:
@@ -306,7 +303,7 @@ class GameController(QObject):
         - validation_result: Dictionary with validation details
         
         FUNCTIONALITY:
-        - Cut all remaining wires instantly
+        - Cut all wires instantly
         - Update UI with success feedback
         - Trigger level completion sequence
         - Prepare for next level or game completion
@@ -328,51 +325,22 @@ class GameController(QObject):
         
     def on_incorrect_solution(self, validation_result, level_data):
         """
-        HANDLE INCORRECT SOLUTION
-        
-        PURPOSE: Process failed solution attempt and emit errors for display
-        
-        INPUTS:
-        - validation_result: Dictionary with error details
-        - level_data: Current level data with errors array
-        
-        FUNCTIONALITY:
-        - Emit errors from level_data['errors'] for ERROR display
-        - Check for partial progress (some errors fixed)
-        - Cut wires for fixed errors
-        - Update UI with helpful feedback
-        - Show restart option for difficult levels
-        """
-        # Emit errors from level data for ERROR display
+    HANDLE INCORRECT SOLUTION - Updated to not show restart button
+    """
+    # Emit errors from level data for ERROR display
         if 'errors' in level_data and level_data['errors']:
             self.error_feedback_ready.emit(level_data['errors'])
-        
+    
         errors_remaining = validation_result.get('errors', [])
-        errors_fixed_count = validation_result.get('errors_fixed', 0)
-        
-        # Cut wires for errors that were fixed
-        if errors_fixed_count > len(self.errors_fixed):
-            newly_fixed = errors_fixed_count - len(self.errors_fixed)
-            wire_names = ['red', 'blue', 'green', 'yellow']
-            
-            for i in range(newly_fixed):
-                if len(self.errors_fixed) + i < len(wire_names):
-                    wire = wire_names[len(self.errors_fixed) + i]
-                    self.bomb_widget.cut_wire(wire)
-                    
-            # Update errors fixed list
-            self.errors_fixed = list(range(errors_fixed_count))
-            
-        # Provide feedback
+    
+    # Provide feedback without restart button
         if errors_remaining:
             error_msg = f"✗ {len(errors_remaining)} error(s) remaining"
             self.code_editor.update_status(error_msg, "warning")
-            
-            # Show restart button if user is struggling
-            self.code_editor.show_restart_button()
         else:
             self.code_editor.update_status("✗ Logic error in solution", "error")
-            self.code_editor.show_restart_button()
+    
+
             
     def on_syntax_error(self, error_message, line_number):
         """
@@ -387,7 +355,7 @@ class GameController(QObject):
         FUNCTIONALITY:
         - Track syntax error detection
         - Provide real-time feedback to player
-        - No wire cutting for syntax errors (only for logical fixes)
+        - No wire cutting for syntax errors (only for complete solutions)
         """
         # Real-time syntax errors don't trigger wire cutting
         # Only successful code execution cuts wires
@@ -427,27 +395,19 @@ class GameController(QObject):
             
     def on_timer_expired(self):
         """
-        HANDLE TIMER EXPIRATION
-        
-        PURPOSE: Process bomb explosion when countdown reaches zero
-        
-        FUNCTIONALITY:
-        - Stop game activity
-        - Trigger bomb explosion animation
-        - Display game over message
-        - Show restart button for retry option
-        """
+    HANDLE TIMER EXPIRATION - Only place restart button shows
+    """
         self.game_active = False
-        
+    
         print(f"Timer expired on level {self.current_level}")
-        
-        # Update UI
+    
+    # Update UI
         self.code_editor.update_status("💥 BOOM! Timer expired!", "error")
-        
-        # Show restart button so user can try again
+    
+    # Show restart button only when timer expires
         self.code_editor.show_restart_button()
-        
-        # Emit game over signal
+    
+    # Emit game over signal
         self.game_over.emit("Time expired - Bomb exploded!")
         
     def on_level_completed(self):
@@ -492,7 +452,7 @@ class GameController(QObject):
         FUNCTIONALITY:
         - Reset all level state
         - Reload level data and timer
-        - Clear UI state and error tracking
+        - Clear UI state
         - Restart countdown and game activity
         """
         print(f"Restarting level {self.current_level}")

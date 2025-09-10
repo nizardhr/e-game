@@ -296,10 +296,10 @@ print(f"Golden ratio approximation: {fib_ratio(10):.6f}")''',
 },
             
             6: {
-                'title': 'Statistical Calculations',
-                'description': 'Calculate mean, median, and mode',
-                'difficulty': 'Intermediate',
-                'broken_code': '''# Statistical calculations
+    'title': 'Statistical Calculations',
+    'description': 'Calculate mean, median, and variance',
+    'difficulty': 'Intermediate',
+    'broken_code': '''# Statistical calculations
 import math
 
 # Statistical calculations
@@ -312,7 +312,7 @@ def calculate_mean(numbers):
 def calculate_median(numbers):
     # Sort numbers to find the middle value
     sorted_nums = sorted(numbers)
-    n == len(sorted_nums)
+    n == len(sorted_nums) 
     
     if n % 2 == 0:
         # Even case → average of the two middle values
@@ -328,53 +328,7 @@ def calculate_variance(numbers):
     
 
     squared_diffs = [(x - mean) ** 2 for x in numbers]
-    return sum(squared_diffs) / (len(numbers) - 1) 
-
-
-def calculate_std_dev(numbers):
-    # Standard deviation = square root of variance
-    return math.sqrt(calculate_variance(numbers))
-
-
-# Test data
-data = [1, 2, 2, 3, 4, 4, 4, 5, 6]
-
-print(f"Data: {data}")
-print(f"Mean: {calculate_mean(data):.2f}") 
-print(f"Median: {calculate_median(data)}")    
-print(f"Variance: {calculate_variance(data):.2f}")  
-print(f"Std Dev: {calculate_std_dev(data):.2f}") 
-''',
-                'solution_code': '''# Statistical calculations
-import math
-
-# Statistical calculations
-
-def calculate_mean(numbers):
-    # Mean = sum of values / number of values
-    return sum(numbers) / len(numbers)
-
-
-def calculate_median(numbers):
-    # Sort numbers to find the middle value
-    sorted_nums = sorted(numbers)
-    n = len(sorted_nums)
-    
-    if n % 2 == 0:
-        # Even case → average of the two middle values
-        return (sorted_nums[n//2 - 1] + sorted_nums[n//2]) / 2
-    else:
-        # Odd case → middle value directly
-        return sorted_nums[n//2]
-
-
-def calculate_variance(numbers):
-    # Variance = average of squared differences from the mean
-    mean = calculate_mean(numbers)
-    
-
-    squared_diffs = [(x - mean) ** 2 for x in numbers]
-    return sum(squared_diffs) / (len(numbers)) 
+    return sum(squared_diffs) / (len(numbers) - 1)
 
 
 def calculate_std_dev(numbers):
@@ -390,13 +344,68 @@ print(f"Mean: {calculate_mean(data):.2f}")
 print(f"Median: {calculate_median(data)}")    
 print(f"Variance: {calculate_variance(data):.2f}")  
 print(f"Std Dev: {calculate_std_dev(data):.2f}")''',
-                'test_cases': [
-                    {'input': [1, 2, 2, 3, 4, 4, 4, 5, 6], 'output': 3.44},  # Mean test
-                    {'input': [1, 2, 2, 3, 4, 4, 4, 5, 6], 'output': 3}  # Median test
-                ],
-                'hint': 'Check two things: 1) Are you using population variance (÷N) or sample variance (÷N-1)? 2) For odd-length lists, which index gives you the middle element?',
-                'errors': ['Assignment operator (=) instead of equality (==)']
-            },
+    
+    'solution_code': '''# Statistical calculations
+import math
+
+# Statistical calculations
+
+def calculate_mean(numbers):
+    # Mean = sum of values / number of values
+    return sum(numbers) / len(numbers)
+
+
+def calculate_median(numbers):
+    # Sort numbers to find the middle value
+    sorted_nums = sorted(numbers)
+    n = len(sorted_nums)  # FIXED: Use assignment operator (=)
+    
+    if n % 2 == 0:
+        # Even case → average of the two middle values
+        return (sorted_nums[n//2 - 1] + sorted_nums[n//2]) / 2
+    else:
+        # Odd case → middle value directly
+        return sorted_nums[n//2]  # FIXED: Correct index for odd-length median
+
+
+def calculate_variance(numbers):
+    # Variance = average of squared differences from the mean
+    mean = calculate_mean(numbers)
+    
+
+    squared_diffs = [(x - mean) ** 2 for x in numbers]
+    return sum(squared_diffs) / len(numbers)  # FIXED: Population variance (divide by N)
+
+
+def calculate_std_dev(numbers):
+    # Standard deviation = square root of variance
+    return math.sqrt(calculate_variance(numbers))
+
+
+# Test data
+data = [1, 2, 2, 3, 4, 4, 4, 5, 6]
+
+print(f"Data: {data}")
+print(f"Mean: {calculate_mean(data):.2f}") 
+print(f"Median: {calculate_median(data)}")    
+print(f"Variance: {calculate_variance(data):.2f}")  
+print(f"Std Dev: {calculate_std_dev(data):.2f}")''',
+    
+    'test_cases': [
+        {'input': [1, 2, 2, 3, 4, 4, 4, 5, 6], 'output': 3.44},  # Mean: (1+2+2+3+4+4+4+5+6)/9 ≈ 3.44
+        {'input': [1, 2, 2, 3, 4, 4, 4, 5, 6], 'output': 4},     # Median of 9 elements: 5th element = 4
+        {'input': [1, 2, 3, 4, 5], 'output': 3.0},               # Mean of 1,2,3,4,5 = 3.0
+        {'input': [1, 2, 3, 4, 5], 'output': 3}                  # Median of 5 elements: 3rd element = 3
+    ],
+    
+    'hint': 'Check three things: 1) Are you using assignment (=) instead of equality (==)? 2) For odd-length lists, which index gives you the middle element? 3) Are you using population variance (÷N) or sample variance (÷N-1)?',
+    
+    'errors': [
+        'Assignment operator (=) instead of equality (==)',
+        'Incorrect median calculation for odd-length lists',
+        'Using sample variance instead of population variance'
+    ]
+},
             
             7: {
                 'title': 'Matrix Operations',
@@ -1087,9 +1096,23 @@ for i, dataset in enumerate(test_datasets):
     print("-" * 50)
 ''',
                 'test_cases': [
-                    {'input': [1, 2, 3, 4, 5], 'output': 3.0},  # Mean test
-                    {'input': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], 'output': 5.5},  # Mean test
-                ],
+    # Test calculate_mean function
+    {'input': [1, 2, 2, 3, 4, 4, 4, 5, 6], 'output': 3.44, 'function': 'calculate_mean'},
+    {'input': [1, 2, 3, 4, 5], 'output': 3.0, 'function': 'calculate_mean'},
+    
+    # Test calculate_median function  
+    {'input': [1, 2, 2, 3, 4, 4, 4, 5, 6], 'output': 4, 'function': 'calculate_median'},
+    {'input': [1, 2, 3, 4, 5], 'output': 3, 'function': 'calculate_median'},
+    {'input': [1, 2, 3, 4], 'output': 2.5, 'function': 'calculate_median'},  # Even length test
+    
+    # Test calculate_variance function
+    {'input': [1, 2, 3, 4, 5], 'output': 2.0, 'function': 'calculate_variance'},
+    {'input': [2, 2, 2, 2], 'output': 0.0, 'function': 'calculate_variance'},  # No variance test
+    
+    # Test calculate_std_dev function
+    {'input': [1, 2, 3, 4, 5], 'output': 1.41, 'function': 'calculate_std_dev'},  # sqrt(2.0) ≈ 1.41
+    {'input': [2, 2, 2, 2], 'output': 0.0, 'function': 'calculate_std_dev'},     # sqrt(0.0) = 0.0
+],
                 'hint': 'Look at nested loops, weight calculations, and index boundaries; subtle mistakes may only appear for special datasets or edge cases.',
                 'errors': ['The broken version has errors including division by zero on empty datasets, inverted sample/population variance logic, unnecessary nested loops inflating skewness and kurtosis, reversed percentile interpolation with out-of-bounds indices, stale standard deviation in confidence intervals, a missing parenthesis causing a syntax error, and unsafe handling of single-element datasets.']
             }
@@ -1159,24 +1182,21 @@ for i, dataset in enumerate(test_datasets):
                 failed_tests = [result for result in test_results if not result['passed']]
                 
                 return {
-                    'valid': False,
-                    'errors': [f"Test failed: {test['error']}" for test in failed_tests],
-                    'errors_fixed': self.estimate_errors_fixed(submitted_code, level_data),
-                    'test_results': test_results
-                }
+    'valid': False,
+    'errors': [f"Test failed: {test['error']}" for test in failed_tests],
+    'test_results': test_results
+}
                 
         except SyntaxError as e:
             return {
                 'valid': False,
                 'errors': [f'Syntax Error: {e.msg}'],
-                'errors_fixed': 0,
                 'test_results': []
             }
         except Exception as e:
             return {
                 'valid': False,
                 'errors': [f'Runtime Error: {str(e)}'],
-                'errors_fixed': self.estimate_errors_fixed(submitted_code, level_data),
                 'test_results': []
             }
             
@@ -1339,54 +1359,6 @@ for i, dataset in enumerate(test_datasets):
         
         # Handle string and other types with exact comparison
         return actual == expected
-        
-    def estimate_errors_fixed(self, submitted_code: str, level_data: Dict) -> int:
-        """
-        ESTIMATE NUMBER OF ERRORS FIXED
-        
-        PURPOSE: Analyze code to estimate progress in fixing errors
-        
-        INPUTS:
-        - submitted_code: Current code submission
-        - level_data: Level data with error information
-        
-        RETURNS:
-        - Integer count of estimated errors fixed
-        
-        HEURISTICS:
-        - Check for syntax improvements
-        - Compare against common error patterns
-        - Analyze structural completeness
-        """
-        broken_code = level_data.get('broken_code', '')
-        errors = level_data.get('errors', [])
-        
-        if not errors:
-            return 0
-            
-        errors_fixed = 0
-        
-        try:
-            # Check if syntax is now valid
-            ast.parse(submitted_code)
-            errors_fixed += 1  # At least syntax is fixed
-        except SyntaxError:
-            pass
-            
-        # Additional heuristics based on common error patterns
-        # This is a simplified estimation - could be more sophisticated
-        
-        # Check for common fixes
-        if ':' in submitted_code and 'def ' in submitted_code:
-            errors_fixed += 1
-            
-        if submitted_code.count('(') == submitted_code.count(')'):
-            errors_fixed += 1
-            
-        if '==' in submitted_code and not ' = ' in submitted_code.replace('==', ''):
-            errors_fixed += 1
-            
-        return min(errors_fixed, len(errors))
         
     def get_all_levels_info(self) -> List[Dict]:
         """
