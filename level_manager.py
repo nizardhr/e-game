@@ -1282,9 +1282,7 @@ for i, dataset in enumerate(test_datasets):
         """
         results = []
         
-        # DEBUG: Print what we're testing
-        print(f"🔍 DEBUG: Starting test execution")
-        print(f"🔍 DEBUG: Number of test cases: {len(test_cases)}")
+
         
         # Create safe execution environment with class support
         safe_globals = {
@@ -1327,17 +1325,16 @@ for i, dataset in enumerate(test_datasets):
         }
         try:
             # Execute the code in safe environment
-            print(f"🔍 DEBUG: Executing user code...")
             exec(code, safe_globals)
             
             # DEBUG: Print available functions
             available_functions = [key for key in safe_globals.keys() 
                                  if callable(safe_globals.get(key)) and not key.startswith('_')]
-            print(f"🔍 DEBUG: Available functions after execution: {available_functions}")
+
             
             # Determine which level we're testing based on available functions
             level_type = self.detect_level_type(safe_globals)
-            print(f"🔍 DEBUG: Detected level type: {level_type}")
+
             
             # Run tests based on level type
             if level_type == "level_6":
@@ -1355,7 +1352,7 @@ for i, dataset in enumerate(test_datasets):
                 results = self.run_single_function_tests(safe_globals, code, test_cases)
                 
         except Exception as e:
-            print(f"🔍 DEBUG: Code execution failed entirely: {str(e)}")
+
             # Code execution failed entirely
             for i, test_case in enumerate(test_cases):
                 results.append({
@@ -1367,7 +1364,7 @@ for i, dataset in enumerate(test_datasets):
                     'error': f'Code execution failed: {str(e)}'
                 })
         
-        print(f"🔍 DEBUG: Final test results summary: {len([r for r in results if r['passed']])}/{len(results)} passed")
+       
         return results
     
     def detect_level_type(self, safe_globals: dict) -> str:
@@ -1432,7 +1429,6 @@ for i, dataset in enumerate(test_datasets):
                     func = safe_globals[func_name]
                     actual_output = func(scenario['input'])
                     
-                    print(f"🔍 DEBUG: {scenario['desc']}: {func_name}({scenario['input']}) = {actual_output}, expected = {scenario['expected']}")
                     
                     passed = self.compare_outputs(actual_output, scenario['expected'])
                     
@@ -1510,7 +1506,6 @@ for i, dataset in enumerate(test_datasets):
                     else:
                         actual_output = func(scenario['input'])
                     
-                    print(f"🔍 DEBUG: {scenario['desc']}: {actual_output}")
                     
                     passed = self.compare_outputs(actual_output, scenario['expected'])
                     
@@ -1584,7 +1579,6 @@ for i, dataset in enumerate(test_datasets):
                     func = safe_globals[func_name]
                     actual_output = func(scenario['input'])
                     
-                    print(f"🔍 DEBUG: {scenario['desc']}: {actual_output}")
                     
                     if func_name == 'calculate_z_scores':
                         # Compare z-scores with tolerance for each element
@@ -1673,7 +1667,6 @@ for i, dataset in enumerate(test_datasets):
                     else:
                         actual_output = func(scenario['input'])
                     
-                    print(f"🔍 DEBUG: {scenario['desc']}: {actual_output}")
                     
                     passed = self.compare_outputs(actual_output, scenario['expected'])
                     
@@ -1755,7 +1748,6 @@ for i, dataset in enumerate(test_datasets):
                         else:
                             actual_output = method()
                         
-                        print(f"🔍 DEBUG: {scenario['desc']}: {actual_output}")
                         
                         passed = self.compare_outputs(actual_output, scenario['expected'])
                         
@@ -1803,7 +1795,6 @@ for i, dataset in enumerate(test_datasets):
         
         # Extract the main function name from code
         main_function = self.extract_main_function(code)
-        print(f"🔍 DEBUG: Detected main function: {main_function}")
         
         for i, test_case in enumerate(test_cases):
             try:
@@ -1812,7 +1803,6 @@ for i, dataset in enumerate(test_datasets):
                     test_input = test_case['input']
                     expected_output = test_case['output']
                     
-                    print(f"🔍 DEBUG: Calling {main_function}({test_input})")
                     
                     # Handle different input types
                     if isinstance(test_input, tuple):
