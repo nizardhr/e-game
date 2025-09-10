@@ -240,7 +240,7 @@ def fibonacci(n):
     fib_seq = [0, 1]
     for i in range(2, n):
         next_fib = fib_seq[i-1] + fib_seq[i-2]
-        fib_seq.append(next_fib)
+        fib_seq = [next_fib]  
     
     return fib_seq
 
@@ -256,7 +256,8 @@ def fib_ratio(n):
         return None
     return fib_nums[-1] / fib_nums[-2]
 
-print(f"Golden ratio approximation: {fib_ratio(10):.6f}")''',
+print(f"Golden ratio approximation: {fib_ratio(10):.6f}")
+''',
                 'solution_code': '''# Generate Fibonacci sequence
 def fibonacci(n):
     if n <= 0:
@@ -291,8 +292,8 @@ print(f"Golden ratio approximation: {fib_ratio(10):.6f}")''',
                     {'input': 7, 'output': [0, 1, 1, 2, 3, 5, 8]},
                     {'input': 1, 'output': [0]}
                 ],
-                'hint': 'This code is actually correct! Sometimes the "error" is in our assumptions.',
-                'errors': ['No actual error - testing edge case']
+                'hint': 'This code only returns one element in the sequence',
+                'errors': ['No actual error']
             },
             
             6: {
@@ -300,32 +301,51 @@ print(f"Golden ratio approximation: {fib_ratio(10):.6f}")''',
                 'description': 'Calculate mean, median, and mode',
                 'difficulty': 'Intermediate',
                 'broken_code': '''# Statistical calculations
+import math
+
+# Statistical calculations
+
 def calculate_mean(numbers):
+    # Mean = sum of values / number of values
     return sum(numbers) / len(numbers)
 
-def calculate_median(numbers):
-    sorted_nums = sorted(numbers)
-    n = len(sorted_nums)
-    if n % 2 == 0:
-        return (sorted_nums[n//2-1] + sorted_nums[n//2]) / 2
-    else:
-        return sorted_nums[n//2]
 
-def calculate_mode(numbers):
-    frequency = {}
-    for num in numbers:
-        frequency[num] = frequency.get(num, 0) + 1
+def calculate_median(numbers):
+    # Sort numbers to find the middle value
+    sorted_nums = sorted(numbers)
+    n == len(sorted_nums)
     
-    max_freq = max(frequency.values())
-    modes = [num for num, freq in frequency.items() if freq = max_freq]
-    return modes[0] if len(modes) == 1 else modes
+    if n % 2 == 0:
+        # Even case → average of the two middle values
+        return (sorted_nums[n//2 - 1] + sorted_nums[n//2]) / 2
+    else:
+        # Odd case → middle value directly
+        return sorted_nums[n//2 + 1]
+
+
+def calculate_variance(numbers):
+    # Variance = average of squared differences from the mean
+    mean = calculate_mean(numbers)
+    
+
+    squared_diffs = [(x - mean) ** 2 for x in numbers]
+    return sum(squared_diffs) / (len(numbers) - 1) 
+
+
+def calculate_std_dev(numbers):
+    # Standard deviation = square root of variance
+    return math.sqrt(calculate_variance(numbers))
+
 
 # Test data
 data = [1, 2, 2, 3, 4, 4, 4, 5, 6]
+
 print(f"Data: {data}")
-print(f"Mean: {calculate_mean(data):.2f}")
-print(f"Median: {calculate_median(data)}")
-print(f"Mode: {calculate_mode(data)}")''',
+print(f"Mean: {calculate_mean(data):.2f}") 
+print(f"Median: {calculate_median(data)}")    
+print(f"Variance: {calculate_variance(data):.2f}")  
+print(f"Std Dev: {calculate_std_dev(data):.2f}") 
+''',
                 'solution_code': '''# Statistical calculations
 def calculate_mean(numbers):
     return sum(numbers) / len(numbers)
@@ -371,29 +391,34 @@ def matrix_multiply(A, B):
     rows_A, cols_A = len(A), len(A[0])
     rows_B, cols_B = len(B), len(B[0])
     
+    # Check dimensions for multiplication
     if cols_A != rows_B:
         raise ValueError("Cannot multiply matrices: incompatible dimensions")
     
-    # Initialize result matrix
-    C = [[0 for _ in range(cols_B)] for _ in range(rows_A)]
+    C = [[0 for _ in range(rows_A)] for _ in range(cols_B)]
     
     # Perform multiplication
     for i in range(rows_A):
         for j in range(cols_B):
             for k in range(cols_A):
-                C[i][j] += A[i][k] * B[k][j]
+                C[j][i] += A[i][k] * B[k][j]
     
     return C
 
+
 def matrix_transpose(matrix):
     rows, cols = len(matrix), len(matrix[0])
-    transposed = [[0 for _ in range(rows)] for _ in range(cols)]
+    
+    # Correct dimensions should be cols × rows
+    transposed = [[0 for _ in range(cols)] for _ in range(rows)] 
     
     for i in range(rows):
         for j in range(cols):
-            transposed[j][i] = matrix[i][j]
+            # This will break symmetry for non-square matrices
+            transposed[i][j] = matrix[j][i] 
     
     return transposed
+
 
 # Test matrices
 A = [[1, 2], [3, 4], [5, 6]]
@@ -407,6 +432,7 @@ print("Matrix B:")
 for row in B:
     print(row)
 
+# Test multiplication
 result = matrix_multiply(A, B)
 print("A × B:")
 for row in result:
@@ -482,78 +508,71 @@ for row in A_T:
                 'difficulty': 'Advanced',
                 'broken_code': '''# Calculate standard deviation
 def calculate_variance(numbers):
+    # population mean
     mean = sum(numbers) / len(numbers)
-    squared_diffs = [(x - mean)**2 for x in numbers]
-    variance = sum(squared_diffs) / len(numbers)
+    # squared differences from the mean
+    squared_diffs = [(x - mean) ** 2 for x in numbers]
+    variance = sum(squared_diffs) / (len(numbers) - 1)
+    
     return variance
 
+
 def calculate_std_dev(numbers):
+    # Standard deviation is the square root of variance
     variance = calculate_variance(numbers)
-    return variance**0.5
+    return variance ** 0.5
+
 
 def calculate_z_scores(numbers):
+    """
+    Z-score explanation (also in comments below):
+      z = (x - mean) / std_dev
+    It expresses how many standard deviations a value x is from the mean:
+      - z > 0  => x is above the mean
+      - z < 0  => x is below the mean
+      - |z| large => x is far from the mean
+    """
     mean = sum(numbers) / len(numbers)
     std_dev = calculate_std_dev(numbers)
     
+    # Defensive check: if std_dev is zero (all values identical), return zeros
     if std_dev == 0:
         return [0] * len(numbers)
+
+    variance = calculate_variance(numbers)
+    z_scores = [(x - mean) / variance for x in numbers]
     
-    z_scores = [(x - mean) / std_dev for x in numbers]
     return z_scores
+
 
 # Test data sets
 datasets = [
-    [10, 12, 14, 16, 18, 20],
-    [1, 1, 1, 1, 1],
-    [100, 200, 150, 175, 225]
+    [10, 12, 14, 16, 18, 20],   # evenly spaced
+    [1, 1, 1, 1, 1],            # zero variance case
+    [100, 200, 150, 175, 225]   # varied dataset
 ]
+
+# -----------------------
+# Explanation of enumerate:
+# -----------------------
+# enumerate(datasets) yields pairs (index, value) for each item in 'datasets'.
+# Example: enumerate(['a','b']) -> (0,'a'), (1,'b')
+# In the loop "for i, data in enumerate(datasets):"
+#   - i is the index (0, 1, 2, ...)
+#   - data is the dataset at that index (the list itself)
+# This saves you from manually maintaining a counter.
+# -----------------------
 
 for i, data in enumerate(datasets):
     print(f"Dataset {i+1}: {data}")
     print(f"  Mean: {sum(data)/len(data):.2f}")
     print(f"  Variance: {calculate_variance(data):.2f}")
     print(f"  Std Dev: {calculate_std_dev(data):.2f}")
-    
     z_scores = calculate_z_scores(data)
-    print(f"  Z-scores: {[round(z, 2) for z in z_scores]}")
-    print()''',
-                'solution_code': '''# Calculate standard deviation
-def calculate_variance(numbers):
-    mean = sum(numbers) / len(numbers)
-    squared_diffs = [(x - mean)**2 for x in numbers]
-    variance = sum(squared_diffs) / len(numbers)
-    return variance
-
-def calculate_std_dev(numbers):
-    variance = calculate_variance(numbers)
-    return variance**0.5
-
-def calculate_z_scores(numbers):
-    mean = sum(numbers) / len(numbers)
-    std_dev = calculate_std_dev(numbers)
+    print(f"  Z-scores: {[round(z, 2) for z in z_scores}")  
     
-    if std_dev == 0:
-        return [0] * len(numbers)
-    
-    z_scores = [(x - mean) / std_dev for x in numbers]
-    return z_scores
-
-# Test data sets
-datasets = [
-    [10, 12, 14, 16, 18, 20],
-    [1, 1, 1, 1, 1],
-    [100, 200, 150, 175, 225]
-]
-
-for i, data in enumerate(datasets):
-    print(f"Dataset {i+1}: {data}")
-    print(f"  Mean: {sum(data)/len(data):.2f}")
-    print(f"  Variance: {calculate_variance(data):.2f}")
-    print(f"  Std Dev: {calculate_std_dev(data):.2f}")
-    
-    z_scores = calculate_z_scores(data)
-    print(f"  Z-scores: {[round(z, 2) for z in z_scores]}")
-    print()''',
+    print()
+''',
                 'test_cases': [
                     {'input': [10, 12, 14, 16, 18, 20], 'output': 3.16},  # Std dev approximation
                     {'input': [1, 1, 1, 1, 1], 'output': 0.0},  # No variance
