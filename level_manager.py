@@ -1810,7 +1810,6 @@ for i, dataset in enumerate(test_datasets):
                     else:
                         actual_output = func(test_input)
                     
-                    print(f"🔍 DEBUG: Function returned: {actual_output}")
                     
                     # Compare outputs
                     passed = self.compare_outputs(actual_output, expected_output)
