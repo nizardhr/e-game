@@ -598,6 +598,71 @@ for i, data in enumerate(datasets):
     
     print()
 ''',
+                'solution_code': '''# Calculate standard deviation
+def calculate_variance(numbers):
+    # population mean
+    mean = sum(numbers) / len(numbers)
+    # squared differences from the mean
+    squared_diffs = [(x - mean) ** 2 for x in numbers]
+    variance = sum(squared_diffs) / len(numbers)  # FIXED: Population variance (divide by N)
+    
+    return variance
+
+
+def calculate_std_dev(numbers):
+    # Standard deviation is the square root of variance
+    variance = calculate_variance(numbers)
+    return variance ** 0.5
+
+
+def calculate_z_scores(numbers):
+    """
+    Z-score explanation (also in comments below):
+      z = (x - mean) / std_dev
+    It expresses how many standard deviations a value x is from the mean:
+      - z > 0  => x is above the mean
+      - z < 0  => x is below the mean
+      - |z| large => x is far from the mean
+    """
+    mean = sum(numbers) / len(numbers)
+    std_dev = calculate_std_dev(numbers)
+    
+    # Defensive check: if std_dev is zero (all values identical), return zeros
+    if std_dev == 0:
+        return [0] * len(numbers)
+
+    z_scores = [(x - mean) / std_dev for x in numbers]  # FIXED: Use std_dev instead of variance
+    
+    return z_scores
+
+
+# Test data sets
+datasets = [
+    [10, 12, 14, 16, 18, 20],   # evenly spaced
+    [1, 1, 1, 1, 1],            # zero variance case
+    [100, 200, 150, 175, 225]   # varied dataset
+]
+
+# -----------------------
+# Explanation of enumerate:
+# -----------------------
+# enumerate(datasets) yields pairs (index, value) for each item in 'datasets'.
+# Example: enumerate(['a','b']) -> (0,'a'), (1,'b')
+# In the loop "for i, data in enumerate(datasets):"
+#   - i is the index (0, 1, 2, ...)
+#   - data is the dataset at that index (the list itself)
+# This saves you from manually maintaining a counter.
+# -----------------------
+
+for i, data in enumerate(datasets):
+    print(f"Dataset {i+1}: {data}")
+    print(f"  Mean: {sum(data)/len(data):.2f}")
+    print(f"  Variance: {calculate_variance(data):.2f}")
+    print(f"  Std Dev: {calculate_std_dev(data):.2f}")
+    z_scores = calculate_z_scores(data)
+    print(f"  Z-scores: {[round(z, 2) for z in z_scores]}")  # FIXED: Missing closing bracket
+    
+    print()''',
                 'test_cases': [
                     {'input': [10, 12, 14, 16, 18, 20], 'output': 3.16},  # Std dev approximation
                     {'input': [1, 1, 1, 1, 1], 'output': 0.0},  # No variance
@@ -1470,7 +1535,7 @@ for i, dataset in enumerate(test_datasets):
             {
                 'func': 'calculate_std_dev',
                 'input': [10, 12, 14, 16, 18, 20],
-                'expected': 3.16,  # Approximation
+                'expected': 3.42,  # Approximation
                 'desc': 'Standard deviation of evenly spaced numbers'
             },
             {
