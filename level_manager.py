@@ -346,35 +346,52 @@ print(f"Variance: {calculate_variance(data):.2f}")
 print(f"Std Dev: {calculate_std_dev(data):.2f}") 
 ''',
                 'solution_code': '''# Statistical calculations
+import math
+
+# Statistical calculations
+
 def calculate_mean(numbers):
+    # Mean = sum of values / number of values
     return sum(numbers) / len(numbers)
 
+
 def calculate_median(numbers):
+    # Sort numbers to find the middle value
     sorted_nums = sorted(numbers)
     n = len(sorted_nums)
+    
     if n % 2 == 0:
-        return (sorted_nums[n//2-1] + sorted_nums[n//2]) / 2
+        # Even case → average of the two middle values
+        return (sorted_nums[n//2 - 1] + sorted_nums[n//2]) / 2
     else:
+        # Odd case → middle value directly
         return sorted_nums[n//2]
 
-def calculate_mode(numbers):
-    frequency = {}
-    for num in numbers:
-        frequency[num] = frequency.get(num, 0) + 1
+
+def calculate_variance(numbers):
+    # Variance = average of squared differences from the mean
+    mean = calculate_mean(numbers)
     
-    max_freq = max(frequency.values())
-    modes = [num for num, freq in frequency.items() if freq == max_freq]
-    return modes[0] if len(modes) == 1 else modes
+
+    squared_diffs = [(x - mean) ** 2 for x in numbers]
+    return sum(squared_diffs) / (len(numbers)) 
+
+
+def calculate_std_dev(numbers):
+    # Standard deviation = square root of variance
+    return math.sqrt(calculate_variance(numbers))
+
 
 # Test data
 data = [1, 2, 2, 3, 4, 4, 4, 5, 6]
+
 print(f"Data: {data}")
-print(f"Mean: {calculate_mean(data):.2f}")
-print(f"Median: {calculate_median(data)}")
-print(f"Mode: {calculate_mode(data)}")''',
+print(f"Mean: {calculate_mean(data):.2f}") 
+print(f"Median: {calculate_median(data)}")    
+print(f"Variance: {calculate_variance(data):.2f}")  
+print(f"Std Dev: {calculate_std_dev(data):.2f}")''',
                 'test_cases': [
                     {'input': [1, 2, 2, 3, 4, 4, 4, 5, 6], 'output': 3.44},  # Mean test
-                    {'input': [1, 2, 2, 3, 4, 4, 4, 5, 6], 'output': 4},  # Mode test
                     {'input': [1, 2, 2, 3, 4, 4, 4, 5, 6], 'output': 3}  # Median test
                 ],
                 'hint': 'Check two things: 1) Are you using population variance (÷N) or sample variance (÷N-1)? 2) For odd-length lists, which index gives you the middle element?',
