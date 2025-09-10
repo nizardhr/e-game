@@ -10,7 +10,7 @@ DESCRIPTION:
 Provides a professional code editing experience with:
 - Python syntax highlighting using Pygments
 - Real-time error detection and highlighting
-- Hint system for debugging assistance
+- Dual display system: Errors (Test Code) and Hints (Timer)
 - Submit button for code validation
 - Restart button for level retry
 - Line numbers and professional appearance
@@ -177,7 +177,7 @@ class CodeEditor(QWidget):
     - Real-time syntax error detection
     - Submit button for code validation
     - Restart button for level retry
-    - Hint display system for debugging assistance
+    - Dual feedback system: ERROR and HINTS displays
     - Professional code editor appearance
     
     SIGNALS:
@@ -201,7 +201,7 @@ class CodeEditor(QWidget):
         """
         INITIALIZE USER INTERFACE
         
-        PURPOSE: Set up editor layout with text area, buttons, and hint display
+        PURPOSE: Set up editor layout with text area, buttons, and dual feedback display
         
         LAYOUT STRUCTURE:
         Main Widget
@@ -210,7 +210,8 @@ class CodeEditor(QWidget):
         │   ├── Submit Button
         │   ├── Restart Button
         │   └── Status Label
-        └── Hint Display Area (collapsible)
+        ├── ERROR Display Area (initially hidden)
+        └── HINTS Display Area (initially hidden)
         """
         layout = QVBoxLayout(self)
         layout.setSpacing(10)
@@ -225,14 +226,15 @@ class CodeEditor(QWidget):
         control_panel = self.create_control_panel()
         layout.addWidget(control_panel)
         
-        # Hint display area (initially hidden)
-        self.hint_frame = self.create_hint_display()
+        # Dual feedback display areas (both initially hidden)
+        self.error_frame, self.hint_frame = self.create_feedback_displays()
+        layout.addWidget(self.error_frame)
         layout.addWidget(self.hint_frame)
-        self.hint_frame.hide()
         
         # Set layout proportions
         layout.setStretchFactor(self.text_editor, 1)  # Editor takes most space
         layout.setStretchFactor(control_panel, 0)     # Fixed size controls
+        layout.setStretchFactor(self.error_frame, 0)  # Fixed size errors
         layout.setStretchFactor(self.hint_frame, 0)   # Fixed size hints
         
     def create_control_panel(self):
@@ -326,32 +328,90 @@ class CodeEditor(QWidget):
         
         return panel
         
-    def create_hint_display(self):
+    def create_feedback_displays(self):
         """
-        CREATE HINT DISPLAY AREA
+        CREATE DUAL FEEDBACK DISPLAY AREAS
         
-        PURPOSE: Create collapsible area for showing debugging hints
+        PURPOSE: Create separate areas for ERROR display and HINTS display
         
         FUNCTIONALITY:
-        - Hidden by default, shown when hints are available
-        - Styled to match game theme with hint-specific colors
-        - Scrollable for longer hint messages
+        - ERROR section: Shows when Test Code pressed with wrong solution
+        - HINTS section: Shows when 80% timer threshold reached
+        - Both sections can be visible simultaneously
+        - Independent show/hide functionality
         """
-        frame = QFrame()
-        frame.setFrameStyle(QFrame.StyledPanel)
-        frame.setStyleSheet("""
+        # ERROR Display Frame
+        error_frame = QFrame()
+        error_frame.setFrameStyle(QFrame.StyledPanel)
+        error_frame.setStyleSheet("""
+            QFrame {
+                background-color: #2a0a0a;
+                border: 2px solid #ff4444;
+                border-radius: 5px;
+            }
+        """)
+        error_frame.hide()  # Initially hidden
+        
+        error_layout = QVBoxLayout(error_frame)
+        error_layout.setSpacing(5)
+        
+        # Error header
+        error_header = QLabel("❌ ERROR")
+        error_header.setAlignment(Qt.AlignCenter)
+        error_header.setStyleSheet("""
+            QLabel {
+                color: #ff4444;
+                font-size: 14px;
+                font-weight: bold;
+                padding: 5px;
+                background-color: #3a1a1a;
+                border-radius: 3px;
+            }
+        """)
+        error_layout.addWidget(error_header)
+        
+        # Error content area
+        self.error_label = QLabel("")
+        self.error_label.setWordWrap(True)
+        self.error_label.setStyleSheet("""
+            QLabel {
+                color: #ffffff;
+                font-size: 12px;
+                padding: 10px;
+                background-color: transparent;
+            }
+        """)
+        
+        # Scrollable error area
+        error_scroll = QScrollArea()
+        error_scroll.setWidget(self.error_label)
+        error_scroll.setWidgetResizable(True)
+        error_scroll.setMaximumHeight(100)
+        error_scroll.setStyleSheet("""
+            QScrollArea {
+                border: none;
+                background-color: transparent;
+            }
+        """)
+        error_layout.addWidget(error_scroll)
+        
+        # HINTS Display Frame
+        hint_frame = QFrame()
+        hint_frame.setFrameStyle(QFrame.StyledPanel)
+        hint_frame.setStyleSheet("""
             QFrame {
                 background-color: #2a2a0a;
                 border: 2px solid #ffaa00;
                 border-radius: 5px;
             }
         """)
+        hint_frame.hide()  # Initially hidden
         
-        layout = QVBoxLayout(frame)
-        layout.setSpacing(5)
+        hint_layout = QVBoxLayout(hint_frame)
+        hint_layout.setSpacing(5)
         
         # Hint header
-        hint_header = QLabel("💡 DEBUGGING HINT")
+        hint_header = QLabel("💡 HINTS")
         hint_header.setAlignment(Qt.AlignCenter)
         hint_header.setStyleSheet("""
             QLabel {
@@ -363,7 +423,7 @@ class CodeEditor(QWidget):
                 border-radius: 3px;
             }
         """)
-        layout.addWidget(hint_header)
+        hint_layout.addWidget(hint_header)
         
         # Hint content area
         self.hint_label = QLabel("")
@@ -378,20 +438,19 @@ class CodeEditor(QWidget):
         """)
         
         # Scrollable hint area
-        scroll_area = QScrollArea()
-        scroll_area.setWidget(self.hint_label)
-        scroll_area.setWidgetResizable(True)
-        scroll_area.setMaximumHeight(100)
-        scroll_area.setStyleSheet("""
+        hint_scroll = QScrollArea()
+        hint_scroll.setWidget(self.hint_label)
+        hint_scroll.setWidgetResizable(True)
+        hint_scroll.setMaximumHeight(100)
+        hint_scroll.setStyleSheet("""
             QScrollArea {
                 border: none;
                 background-color: transparent;
             }
         """)
+        hint_layout.addWidget(hint_scroll)
         
-        layout.addWidget(scroll_area)
-        
-        return frame
+        return error_frame, hint_frame
         
     def init_editor_settings(self):
         """
@@ -678,8 +737,8 @@ class CodeEditor(QWidget):
         # Re-enable signals
         self.text_editor.blockSignals(False)
         
-        # Clear UI state
-        self.clear_hint()
+        # Clear feedback displays
+        self.clear_feedback()
         self.update_status("Ready to debug...", "normal")
         
         # Hide restart button for new level
@@ -711,17 +770,69 @@ class CodeEditor(QWidget):
         """
         return self.text_editor.toPlainText()
         
-    def show_hint(self, hint_text):
+    def show_errors(self, error_list):
         """
-        SHOW DEBUGGING HINT
+        SHOW ERROR DISPLAY SECTION
         
-        PURPOSE: Display hint to help user debug the code
+        PURPOSE: Display errors from Test Code button press
         
         INPUTS:
-        - hint_text: Hint message to display
+        - error_list: List of error strings from level_data['errors']
         
         FUNCTIONALITY:
-        - Show hint display area
+        - Show error display frame
+        - Format error list for display
+        - Apply error-specific styling
+        """
+        if not error_list:
+            return
+            
+        # Format error list for display
+        if len(error_list) == 1:
+            error_text = error_list[0]
+        else:
+            error_text = "\n".join([f"{i+1}. {error}" for i, error in enumerate(error_list)])
+        
+        self.error_label.setText(error_text)
+        self.error_frame.show()
+        
+        # Optional: Add flash effect to draw attention
+        self.error_frame.setStyleSheet("""
+            QFrame {
+                background-color: #2a0a0a;
+                border: 2px solid #ff6666;
+                border-radius: 5px;
+            }
+        """)
+        
+        # Reset border color after flash
+        QTimer.singleShot(2000, self.reset_error_styling)
+        
+    def reset_error_styling(self):
+        """
+        RESET ERROR STYLING
+        
+        PURPOSE: Reset error display to normal styling after flash effect
+        """
+        self.error_frame.setStyleSheet("""
+            QFrame {
+                background-color: #2a0a0a;
+                border: 2px solid #ff4444;
+                border-radius: 5px;
+            }
+        """)
+        
+    def show_hint(self, hint_text):
+        """
+        SHOW HINT DISPLAY SECTION
+        
+        PURPOSE: Display hint from 80% timer trigger
+        
+        INPUTS:
+        - hint_text: Hint string from level_data['hint']
+        
+        FUNCTIONALITY:
+        - Show hint display frame
         - Update hint content with formatted message
         - Apply hint-specific styling and animations
         """
@@ -755,11 +866,25 @@ class CodeEditor(QWidget):
             }
         """)
         
+    def clear_errors(self):
+        """
+        CLEAR ERROR DISPLAY
+        
+        PURPOSE: Hide error display section
+        
+        FUNCTIONALITY:
+        - Hide error frame
+        - Clear error content
+        - Reset error state
+        """
+        self.error_frame.hide()
+        self.error_label.setText("")
+        
     def clear_hint(self):
         """
         CLEAR HINT DISPLAY
         
-        PURPOSE: Hide hint display area
+        PURPOSE: Hide hint display section
         
         FUNCTIONALITY:
         - Hide hint frame
@@ -769,3 +894,17 @@ class CodeEditor(QWidget):
         self.hint_frame.hide()
         self.current_hint = None
         self.hint_label.setText("")
+        
+    def clear_feedback(self):
+        """
+        CLEAR ALL FEEDBACK DISPLAYS
+        
+        PURPOSE: Hide both error and hint display sections
+        
+        FUNCTIONALITY:
+        - Clear error display
+        - Clear hint display
+        - Reset all feedback state for new level
+        """
+        self.clear_errors()
+        self.clear_hint()

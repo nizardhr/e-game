@@ -13,6 +13,7 @@ Central orchestrator for the bomb defusing game that handles:
 - Timer management and hint system activation
 - Win/lose logic and game state transitions
 - Communication between UI components
+- Separated error display (Test Code) and hint display (Timer)
 
 DEPENDENCIES:
 - level_manager: Level data and validation logic
@@ -36,19 +37,21 @@ class GameController(QObject):
     - Manage game state and level progression
     - Coordinate timer, editor, and bomb widget interactions
     - Handle code validation and error detection
-    - Control hint system and difficulty progression
+    - Control dual feedback system (errors and hints)
     - Process win/lose conditions and state transitions
     
     SIGNALS:
     - level_completed: Emitted when level is successfully completed
     - game_over: Emitted when player fails (timer expires)  
     - game_won: Emitted when all levels are completed
+    - error_feedback_ready: Emitted when Test Code reveals errors
     """
     
     # Qt signals for game events
     level_completed = pyqtSignal(int)  # Level number completed
     game_over = pyqtSignal(str)        # Game over with reason
     game_won = pyqtSignal()            # All levels completed
+    error_feedback_ready = pyqtSignal(list)  # Error display for Test Code
     
     def __init__(self, main_window):
         super().__init__()
@@ -119,6 +122,9 @@ class GameController(QObject):
         # Connect bomb widget signals  
         self.bomb_widget.timer_expired.connect(self.on_timer_expired)
         self.bomb_widget.bomb_defused.connect(self.on_level_completed)
+        
+        # Connect error feedback signal to code editor
+        self.error_feedback_ready.connect(self.code_editor.show_errors)
         
         # Start first level
         self.start_level(1)
@@ -252,6 +258,7 @@ class GameController(QObject):
         - Execute code with test cases
         - Track error fixing progress
         - Trigger wire cutting animations for fixed errors
+        - Emit errors for display when solution is incorrect
         """
         if not self.game_active or self.level_completed_flag:
             return
@@ -275,8 +282,8 @@ class GameController(QObject):
                 # Solution is correct!
                 self.on_correct_solution(validation_result)
             else:
-                # Solution has issues
-                self.on_incorrect_solution(validation_result)
+                # Solution has issues - show errors from level data
+                self.on_incorrect_solution(validation_result, level_data)
                 
         except SyntaxError as e:
             # Syntax error still present
@@ -319,22 +326,27 @@ class GameController(QObject):
         
         # Level completion will be handled by bomb_defused signal
         
-    def on_incorrect_solution(self, validation_result):
+    def on_incorrect_solution(self, validation_result, level_data):
         """
         HANDLE INCORRECT SOLUTION
         
-        PURPOSE: Process failed solution attempt
+        PURPOSE: Process failed solution attempt and emit errors for display
         
         INPUTS:
         - validation_result: Dictionary with error details
+        - level_data: Current level data with errors array
         
         FUNCTIONALITY:
-        - Provide feedback on remaining errors
+        - Emit errors from level_data['errors'] for ERROR display
         - Check for partial progress (some errors fixed)
         - Cut wires for fixed errors
         - Update UI with helpful feedback
         - Show restart option for difficult levels
         """
+        # Emit errors from level data for ERROR display
+        if 'errors' in level_data and level_data['errors']:
+            self.error_feedback_ready.emit(level_data['errors'])
+        
         errors_remaining = validation_result.get('errors', [])
         errors_fixed_count = validation_result.get('errors_fixed', 0)
         
@@ -356,8 +368,7 @@ class GameController(QObject):
             error_msg = f"✗ {len(errors_remaining)} error(s) remaining"
             self.code_editor.update_status(error_msg, "warning")
             
-            # Show restart button if user is struggling (more than 3 failed attempts could be tracked)
-            # For now, show it after any incorrect solution
+            # Show restart button if user is struggling
             self.code_editor.show_restart_button()
         else:
             self.code_editor.update_status("✗ Logic error in solution", "error")
@@ -386,13 +397,13 @@ class GameController(QObject):
         """
         ACTIVATE HINT SYSTEM
         
-        PURPOSE: Make hints available when 30 seconds remain on timer
+        PURPOSE: Make hints available when 80% of timer elapses
         
         FUNCTIONALITY:
         - Mark hint as available
-        - Generate hint showing actual error messages from level data
-        - Display hint in code editor with specific bug information
+        - Display hint from level_data['hint'] in HINTS section
         - Provide visual indication that help is available
+        - Use hint string, not errors array
         """
         if not self.game_active or self.level_completed_flag or self.hint_shown:
             return
@@ -402,34 +413,14 @@ class GameController(QObject):
         # Get level data for current level
         level_data = self.level_manager.get_level(self.current_level)
         
-        if level_data and 'errors' in level_data:
-            # Create hint text from actual error messages
-            errors = level_data['errors']
-            
-            if len(errors) == 1:
-                # Single error
-                hint_text = f"🐛 BUG DETECTED: {errors[0]}"
-            else:
-                # Multiple errors
-                hint_text = "🐛 BUGS DETECTED:\n"
-                for i, error in enumerate(errors, 1):
-                    hint_text += f"{i}. {error}\n"
-            
-            # Add encouraging message
-            hint_text += "\n💡 Fix these issues to defuse the bomb!"
+        if level_data and 'hint' in level_data:
+            # Use hint string from level data
+            hint_text = level_data['hint']
             
             self.code_editor.show_hint(hint_text)
             self.hint_shown = True
             
-            print(f"Hint activated for level {self.current_level}: Showing {len(errors)} error(s)")
-        
-        elif level_data and 'hint' in level_data:
-            # Fallback to generic hint if errors field is missing
-            hint_text = f"💡 DEBUGGING HINT: {level_data['hint']}"
-            self.code_editor.show_hint(hint_text)
-            self.hint_shown = True
-            
-            print(f"Hint activated for level {self.current_level} (fallback to generic hint)")
+            print(f"Hint activated for level {self.current_level}: {hint_text}")
         
         else:
             print(f"No hint data available for level {self.current_level}")

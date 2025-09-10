@@ -12,6 +12,7 @@ with Python debugging skills. Players must fix errors to "cut wires" and defuse 
 
 DEPENDENCIES:
 - PyQt5: GUI framework and widgets  
+- PyQt5.QtSvg: SVG support for logo loading
 - Pygments: Python syntax highlighting
 - ast: Code validation and parsing
 """
@@ -22,7 +23,8 @@ from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QHBoxLayout,
                              QVBoxLayout, QSplitter, QLabel, QFrame, QStackedWidget,
                              QPushButton)
 from PyQt5.QtCore import Qt, QTimer
-from PyQt5.QtGui import QFont, QPalette, QColor, QPixmap
+from PyQt5.QtGui import QFont, QPalette, QColor
+from PyQt5.QtSvg import QSvgWidget
 
 from game_controller import GameController
 from code_editor import CodeEditor
@@ -37,7 +39,7 @@ class StartScreen(QWidget):
     
     FUNCTIONALITY:
     - Show coding-themed welcome interface
-    - Display auto-detected logo image
+    - Display auto-detected SVG logo image
     - Provide "Start Game" button to enter main game
     - Apply consistent dark theme styling
     """
@@ -57,7 +59,7 @@ class StartScreen(QWidget):
         layout.setAlignment(Qt.AlignCenter)
         layout.setSpacing(30)
         
-        # Main title - REMOVED text-shadow to fix CSS warning
+        # Main title
         title_label = QLabel("BOMB DEFUSER")
         title_label.setAlignment(Qt.AlignCenter)
         title_label.setStyleSheet("""
@@ -90,11 +92,10 @@ class StartScreen(QWidget):
         layout.addWidget(subtitle_label)
         
         # Logo display area
-        self.logo_label = QLabel()
-        self.logo_label.setAlignment(Qt.AlignCenter)
-        self.logo_label.setMinimumSize(200, 150)
-        self.logo_label.setStyleSheet("""
-            QLabel {
+        self.logo_container = QWidget()
+        self.logo_container.setMinimumSize(200, 150)
+        self.logo_container.setStyleSheet("""
+            QWidget {
                 background-color: #2b2b2b;
                 border: 2px solid #444;
                 border-radius: 10px;
@@ -102,25 +103,18 @@ class StartScreen(QWidget):
             }
         """)
         
-        # Try to load logo image, fallback to text
-        logo_loaded = self.load_logo_image()
-        if not logo_loaded:
-            self.logo_label.setText("CODING CLUB")
-            self.logo_label.setStyleSheet("""
-                QLabel {
-                    background-color: #2b2b2b;
-                    color: #00ff00;
-                    font-size: 18px;
-                    font-weight: bold;
-                    border: 2px solid #444;
-                    border-radius: 10px;
-                    padding: 20px;
-                }
-            """)
+        # Create logo layout
+        logo_layout = QVBoxLayout(self.logo_container)
+        logo_layout.setAlignment(Qt.AlignCenter)
         
-        layout.addWidget(self.logo_label)
+        # Try to load SVG logo, fallback to text
+        svg_loaded = self.load_logo_svg(logo_layout)
+        if not svg_loaded:
+            self.create_text_fallback(logo_layout)
         
-        # Start game button - REMOVED transform to fix CSS warning
+        layout.addWidget(self.logo_container)
+        
+        # Start game button
         start_button = QPushButton("🚀 START GAME")
         start_button.setMinimumHeight(60)
         start_button.setStyleSheet("""
@@ -148,34 +142,57 @@ class StartScreen(QWidget):
         # Add some spacing at bottom
         layout.addStretch()
         
-    def load_logo_image(self):
+    def load_logo_svg(self, layout):
         """
-        LOAD LOGO IMAGE WITH AUTO-DETECTION
+        LOAD SVG LOGO IMAGE
         
-        PURPOSE: Automatically detect and load logo.png or logo.jpg
+        PURPOSE: Load logo.svg file if available
+        
+        INPUTS:
+        - layout: Layout to add SVG widget to
         
         RETURNS:
-        - True if image was loaded successfully
-        - False if no image found (will use text fallback)
+        - True if SVG was loaded successfully
+        - False if no SVG found or loading failed
         """
-        # Check for logo files in current directory
-        for extension in ['png', 'jpg', 'jpeg']:
-            logo_path = f"logo.{extension}"
-            if os.path.exists(logo_path):
-                try:
-                    pixmap = QPixmap(logo_path)
-                    if not pixmap.isNull():
-                        # Scale image to fit the label while maintaining aspect ratio
-                        scaled_pixmap = pixmap.scaled(
-                            180, 130, Qt.KeepAspectRatio, Qt.SmoothTransformation
-                        )
-                        self.logo_label.setPixmap(scaled_pixmap)
-                        return True
-                except Exception as e:
-                    print(f"Error loading logo image {logo_path}: {e}")
-                    continue
+        svg_path = "logo.svg"
+        if os.path.exists(svg_path):
+            try:
+                # Create SVG widget
+                svg_widget = QSvgWidget(svg_path)
+                svg_widget.setFixedSize(180, 130)
+                
+                # Add to layout
+                layout.addWidget(svg_widget)
+                return True
+                
+            except Exception as e:
+                print(f"Error loading SVG logo {svg_path}: {e}")
+                return False
         
         return False
+        
+    def create_text_fallback(self, layout):
+        """
+        CREATE TEXT FALLBACK WHEN NO SVG LOGO
+        
+        PURPOSE: Show "CODING CLUB" text when logo.svg not available
+        
+        INPUTS:
+        - layout: Layout to add text label to
+        """
+        text_label = QLabel("CODING CLUB")
+        text_label.setAlignment(Qt.AlignCenter)
+        text_label.setStyleSheet("""
+            QLabel {
+                background-color: transparent;
+                color: #00ff00;
+                font-size: 18px;
+                font-weight: bold;
+                padding: 20px;
+            }
+        """)
+        layout.addWidget(text_label)
         
     def start_game(self):
         """
@@ -280,7 +297,7 @@ class BombDefuserGame(QMainWindow):
         COMPONENTS:
         - Game status header with level/timer info
         - Code editor with syntax highlighting  
-        - Control buttons and hint display area
+        - Control buttons and feedback display areas
         """
         panel = QFrame()
         panel.setFrameStyle(QFrame.StyledPanel)
@@ -332,27 +349,21 @@ class BombDefuserGame(QMainWindow):
         layout = QVBoxLayout(panel)
         layout.setSpacing(10)
         
-        # Club logo with auto-detected image
-        self.club_logo_label = QLabel("CODING CLUB")
-        self.club_logo_label.setAlignment(Qt.AlignCenter)
-        self.club_logo_label.setFixedSize(120, 60)
+        # Club logo container
+        self.club_logo_container = QWidget()
+        self.club_logo_container.setFixedSize(120, 60)
         
-        # Try to load logo image, fallback to text
-        logo_loaded = self.load_game_logo()
-        if not logo_loaded:
-            self.club_logo_label.setStyleSheet("""
-                QLabel {
-                    background-color: #2b2b2b;
-                    color: #00ff00;
-                    font-size: 12px;
-                    font-weight: bold;
-                    padding: 5px;
-                    border: 2px solid #444;
-                    border-radius: 5px;
-                }
-            """)
+        # Create logo layout
+        logo_layout = QVBoxLayout(self.club_logo_container)
+        logo_layout.setAlignment(Qt.AlignCenter)
+        logo_layout.setContentsMargins(5, 5, 5, 5)
         
-        layout.addWidget(self.club_logo_label)
+        # Try to load SVG logo, fallback to text
+        svg_loaded = self.load_game_logo_svg(logo_layout)
+        if not svg_loaded:
+            self.create_game_text_fallback(logo_layout)
+        
+        layout.addWidget(self.club_logo_container)
         
         # Level info header
         self.level_info = QLabel("MISSION: Debug the Algorithm")
@@ -375,49 +386,65 @@ class BombDefuserGame(QMainWindow):
         layout.addWidget(self.bomb_widget)
         
         # Set layout proportions
-        layout.setStretchFactor(self.club_logo_label, 0)  # Fixed size logo
-        layout.setStretchFactor(self.level_info, 0)       # Fixed size header
-        layout.setStretchFactor(self.bomb_widget, 1)      # Expandable bomb display
+        layout.setStretchFactor(self.club_logo_container, 0)  # Fixed size logo
+        layout.setStretchFactor(self.level_info, 0)           # Fixed size header
+        layout.setStretchFactor(self.bomb_widget, 1)          # Expandable bomb display
         
         return panel
         
-    def load_game_logo(self):
+    def load_game_logo_svg(self, layout):
         """
-        LOAD LOGO IMAGE FOR GAME INTERFACE
+        LOAD SVG LOGO FOR GAME INTERFACE
         
-        PURPOSE: Load auto-detected logo for the game interface
+        PURPOSE: Load logo.svg file for the game interface
+        
+        INPUTS:
+        - layout: Layout to add SVG widget to
         
         RETURNS:
-        - True if image was loaded successfully
-        - False if no image found (will use text fallback)
+        - True if SVG was loaded successfully
+        - False if no SVG found or loading failed
         """
-        # Check for logo files in current directory
-        for extension in ['png', 'jpg', 'jpeg']:
-            logo_path = f"logo.{extension}"
-            if os.path.exists(logo_path):
-                try:
-                    pixmap = QPixmap(logo_path)
-                    if not pixmap.isNull():
-                        # Scale image to fit the smaller game interface label
-                        scaled_pixmap = pixmap.scaled(
-                            110, 50, Qt.KeepAspectRatio, Qt.SmoothTransformation
-                        )
-                        self.club_logo_label.setPixmap(scaled_pixmap)
-                        self.club_logo_label.setText("")  # Clear text when image loaded
-                        self.club_logo_label.setStyleSheet("""
-                            QLabel {
-                                background-color: #2b2b2b;
-                                padding: 5px;
-                                border: 2px solid #444;
-                                border-radius: 5px;
-                            }
-                        """)
-                        return True
-                except Exception as e:
-                    print(f"Error loading game logo image {logo_path}: {e}")
-                    continue
+        svg_path = "logo.svg"
+        if os.path.exists(svg_path):
+            try:
+                # Create SVG widget for game interface (smaller size)
+                svg_widget = QSvgWidget(svg_path)
+                svg_widget.setFixedSize(110, 50)
+                
+                # Add to layout
+                layout.addWidget(svg_widget)
+                return True
+                
+            except Exception as e:
+                print(f"Error loading game SVG logo {svg_path}: {e}")
+                return False
         
         return False
+        
+    def create_game_text_fallback(self, layout):
+        """
+        CREATE TEXT FALLBACK FOR GAME INTERFACE
+        
+        PURPOSE: Show "CODING CLUB" text when logo.svg not available
+        
+        INPUTS:
+        - layout: Layout to add text label to
+        """
+        text_label = QLabel("CODING CLUB")
+        text_label.setAlignment(Qt.AlignCenter)
+        text_label.setStyleSheet("""
+            QLabel {
+                background-color: #2b2b2b;
+                color: #00ff00;
+                font-size: 12px;
+                font-weight: bold;
+                padding: 5px;
+                border: 2px solid #444;
+                border-radius: 5px;
+            }
+        """)
+        layout.addWidget(text_label)
         
     def show_game_screen(self):
         """

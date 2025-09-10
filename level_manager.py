@@ -373,9 +373,9 @@ print(f"Mean: {calculate_mean(data):.2f}")
 print(f"Median: {calculate_median(data)}")
 print(f"Mode: {calculate_mode(data)}")''',
                 'test_cases': [
-                    {'input': [1, 2, 3, 4, 5], 'output': 3.0},  # Mean test
+                    {'input': [1, 2, 2, 3, 4, 4, 4, 5, 6], 'output': 3.44},  # Mean test
                     {'input': [1, 2, 2, 3, 4, 4, 4, 5, 6], 'output': 4},  # Mode test
-                    {'input': [1, 3, 5], 'output': 3}  # Median test
+                    {'input': [1, 2, 2, 3, 4, 4, 4, 5, 6], 'output': 3}  # Median test
                 ],
                 'hint': 'Check two things: 1) Are you using population variance (÷N) or sample variance (÷N-1)? 2) For odd-length lists, which index gives you the middle element?',
                 'errors': ['Assignment operator (=) instead of equality (==)']

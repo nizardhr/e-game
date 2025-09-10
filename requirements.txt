@@ -1,3 +1,4 @@
 PyQt5==5.15.10
+PyQt5-svg==5.15.6
 Pygments==2.17.2
 PyInstaller==6.3.0
